@@ -409,35 +409,59 @@ class ThermalBalanceCard extends HTMLElement {
     });
   }
 
-  _sampleHistory(entityId, numPoints = 20) {
-    if (!entityId || !this._historyData || !this._historyData[entityId]) return null;
-    const items = this._historyData[entityId];
-    if (!Array.isArray(items) || items.length === 0) return null;
+  _sampleHistory(key, liveVal, numPoints = 25) {
+    const eid = this._resolveEntity(key);
+    const result = new Array(numPoints).fill(0);
+
+    if (!eid || !this._historyData || !this._historyData[eid]) {
+      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
+        result[numPoints - 1] = Math.max(0, liveVal);
+      }
+      return result;
+    }
+
+    const items = this._historyData[eid];
+    if (!Array.isArray(items) || items.length === 0) {
+      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
+        result[numPoints - 1] = Math.max(0, liveVal);
+      }
+      return result;
+    }
 
     const now = Date.now() / 1000;
     const start = now - 86400;
-    const interval = 86400 / numPoints;
-    const result = new Array(numPoints).fill(0);
+    const interval = 86400 / (numPoints - 1);
 
-    let currentVal = parseFloat(items[0].s) || 0;
+    let currentVal = parseFloat(items[0].s);
+    if (isNaN(currentVal)) currentVal = 0;
     let itemIdx = 0;
 
     for (let i = 0; i < numPoints; i++) {
       const targetTime = start + (i * interval);
-      while (itemIdx < items.length && items[itemIdx].lu <= targetTime) {
-        const parsed = parseFloat(items[itemIdx].s);
-        if (!isNaN(parsed)) currentVal = parsed;
-        itemIdx++;
+
+      while (itemIdx < items.length) {
+        const item = items[itemIdx];
+        const itemTime = item.lu > 1e11 ? item.lu / 1000 : item.lu;
+        if (itemTime <= targetTime) {
+          const parsed = parseFloat(item.s);
+          if (!isNaN(parsed)) currentVal = parsed;
+          itemIdx++;
+        } else {
+          break;
+        }
       }
-      result[i] = currentVal;
+      result[i] = Math.max(0, currentVal);
     }
+
+    if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
+      result[numPoints - 1] = Math.max(0, liveVal);
+    }
+
     return result;
   }
 
-  _getTrendPoints(key, liveVal, numPoints = 20) {
-    const sampled = this._sampleHistory(this._resolveEntity(key), numPoints);
-    if (sampled) return sampled;
-    return new Array(numPoints).fill(0);
+  _getTrendPoints(key, liveVal, numPoints = 25) {
+    return this._sampleHistory(key, liveVal, numPoints);
   }
 
   _pointsToPath(points, width, height, maxVal) {
@@ -519,13 +543,19 @@ class ThermalBalanceCard extends HTMLElement {
       }
       this._chart = echarts.init(container, null, { renderer: 'canvas' });
 
-      const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'));
-      const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'));
+      const numPoints = 25;
+      const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
+      const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
 
-      const nowHour = new Date().getHours();
-      const timeLabels = Array.from({ length: 20 }, (_, i) => {
-        const h = (nowHour - 19 + i + 24) % 24;
-        return `${h < 10 ? '0' : ''}${h}:00`;
+      const nowMs = Date.now();
+      const startMs = nowMs - 86400000;
+      const intervalMs = 86400000 / (numPoints - 1);
+
+      const timeLabels = Array.from({ length: numPoints }, (_, i) => {
+        const ptTime = new Date(startMs + i * intervalMs);
+        const hh = ptTime.getHours().toString().padStart(2, '0');
+        const mm = ptTime.getMinutes().toString().padStart(2, '0');
+        return `${hh}:${mm}`;
       });
 
       const option = {
