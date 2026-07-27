@@ -545,26 +545,13 @@ class ThermalBalanceCard extends HTMLElement {
     if (!container) return;
 
     loadECharts().then(echarts => {
-      if (!this.shadowRoot || !this.shadowRoot.querySelector('#echart-container')) return;
-      if (this._chart && !this._chart.isDisposed()) {
-        try { this._chart.dispose(); } catch(e){}
-      }
-
-      const numPoints = 288;
-      const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
-      const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
-      const netPoints = this._getTrendPoints('net_balance', this._getState('net_balance'), numPoints);
-
       const nowMs = Date.now();
       const startMs = nowMs - 86400000;
       const intervalMs = 86400000 / (numPoints - 1);
 
-      const timeLabels = Array.from({ length: numPoints }, (_, i) => {
-        const ptTime = new Date(startMs + i * intervalMs);
-        const hh = ptTime.getHours().toString().padStart(2, '0');
-        const mm = ptTime.getMinutes().toString().padStart(2, '0');
-        return `${hh}:${mm}`;
-      });
+      const heatSeriesData = (heatPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
+      const coolSeriesData = (coolPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
+      const netSeriesData = (netPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
 
       const option = {
         backgroundColor: 'transparent',
@@ -585,12 +572,18 @@ class ThermalBalanceCard extends HTMLElement {
           padding: [8, 12],
           textStyle: { color: '#E5E7EB', fontSize: 11 },
           formatter: (params) => {
-            let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${params[0].name}</div>`;
+            if (!params || params.length === 0) return '';
+            const ptMs = params[0].value[0];
+            const ptDate = new Date(ptMs);
+            const hh = ptDate.getHours().toString().padStart(2, '0');
+            const mm = ptDate.getMinutes().toString().padStart(2, '0');
+            let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${hh}:${mm}</div>`;
             params.forEach(p => {
-              const sign = p.value > 0 ? '+' : '';
+              const val = p.value[1];
+              const sign = val > 0 ? '+' : '';
               res += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
                         <span style="width:8px;height:8px;border-radius:50%;background:${p.color}"></span>
-                        <span>${p.seriesName}: <b style="color:#FFF">${sign}${Math.round(p.value)} W</b></span>
+                        <span>${p.seriesName}: <b style="color:#FFF">${sign}${val} W</b></span>
                       </div>`;
             });
             return res;
@@ -603,11 +596,10 @@ class ThermalBalanceCard extends HTMLElement {
           left: 45,
         },
         xAxis: {
-          type: 'category',
+          type: 'time',
           boundaryGap: false,
-          data: timeLabels,
           axisLine: { lineStyle: { color: '#233045' } },
-          axisLabel: { color: '#6B7280', fontSize: 10, interval: 35 },
+          axisLabel: { color: '#6B7280', fontSize: 10 },
           splitLine: { show: false }
         },
         yAxis: {
@@ -634,7 +626,7 @@ class ThermalBalanceCard extends HTMLElement {
                 { offset: 1, color: 'rgba(255, 122, 60, 0.0)' }
               ])
             },
-            data: heatPoints.map(v => Math.round(v))
+            data: heatSeriesData
           },
           {
             name: 'Cooling',
@@ -646,14 +638,14 @@ class ThermalBalanceCard extends HTMLElement {
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color: '#4DA3FF' },
-            lineStyle: { width: 2.2, color: '#4DA3FF' },
+            lineStyle: { width: 2.0, color: '#4DA3FF' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: 'rgba(77, 163, 255, 0.25)' },
                 { offset: 1, color: 'rgba(77, 163, 255, 0.0)' }
               ])
             },
-            data: coolPoints.map(v => Math.round(v))
+            data: coolSeriesData
           },
           {
             name: 'Net',
@@ -672,7 +664,7 @@ class ThermalBalanceCard extends HTMLElement {
                 { offset: 1, color: 'rgba(0, 200, 150, 0.0)' }
               ])
             },
-            data: netPoints.map(v => Math.round(v))
+            data: netSeriesData
           }
         ]
       };
@@ -1013,20 +1005,9 @@ class ThermalBalanceCard extends HTMLElement {
       }
       .card-layout {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
         gap: 16px;
-      }
-      @media (min-width: 768px) {
-        .card-layout {
-          grid-template-columns: 1fr 1fr;
-          align-items: start;
-        }
-      }
-      @container tb-card (min-width: 600px) {
-        .card-layout {
-          grid-template-columns: 1fr 1fr;
-          align-items: start;
-        }
+        align-items: start;
       }
       .card-col {
         display: flex;
