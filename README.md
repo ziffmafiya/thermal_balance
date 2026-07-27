@@ -11,7 +11,7 @@
 ## 🌟 Key Features
 
 * **☀️ Heat Gain ($P_{\text{gain}}$)**: Calculates solar radiation influx through windows and wall/glass thermal transmission ($P_{\text{wall}}$).
-* **🪟 Smart Curtain Shading & Lux Sensor Integration**: Auto-detects open vs closed curtains via an indoor illuminance sensor (Lux). When curtains are closed, solar heat gain is automatically cut by 70% ($g_{\text{solar\_factor}} = 0.20$ vs $0.70$).
+* **🪟 Smart Curtain Shading & Lux Sensor Integration**: Auto-detects open vs closed curtains via an indoor illuminance sensor (Lux). When curtains are closed, solar heat gain is automatically cut by 70% ($g_{\text{shading}} = 0.20$ vs $0.70$).
 * **🌌 Dual Astronomical Daylight Integration**: Integrates Home Assistant's built-in `sun.sun` entity (state & elevation angle $>0^\circ$) and solar irradiance to distinguish daytime solar shading from nighttime indoor artificial lighting.
 * **❄️ AC Cooling Output ($P_{\text{cooling}}$)**: Computes real-time cooling capacity (Watts), Carnot COP, Sensible Heat Ratio (SHR), exit air temperature at AC louvers, and condensation rate (L/h).
 * **🧮 Empirical K-Factor Auto-Calibration ($HLC_{\text{empirical}}$)**: Exponential Moving Average (EMA) estimation of real-world room heat loss ($W/K$), deviation percentage from architectural specs, and insulation quality rating ("Отличная", "Хорошая", "Средняя", "Низкая"). Includes physical bounds ($0.5\times \dots 2.0\times HLC_{\text{theoretical}}$) and AC startup transient boost filtering.
