@@ -17,6 +17,7 @@ const SENSOR_MAP = {
   heat_absorbed: ['_total_heat_absorbed', '_heat_absorbed'],
   ac_energy: ['_ac_thermal_energy_total', '_ac_energy'],
   condensation_rate: ['_ac_condensation_rate', '_condensation_rate'],
+  empirical_k_factor: ['_empirical_k_factor', '_empirical_room_k_factor', '_k_factor'],
 };
 
 function loadECharts() {
@@ -673,7 +674,7 @@ class ThermalBalanceCard extends HTMLElement {
       const windowOpen = this._getAttr('heat_gain', 'window_is_open') ?? this._getAttr('net_balance', 'window_is_open');
 
       // Empirical K-Factor attributes
-      const empiricalK = this._getState('empirical_k_factor');
+      const empiricalK = this._getState('empirical_k_factor') ?? this._getAttr('heat_gain', 'hlc_w_k');
       const empiricalKDev = this._getAttr('empirical_k_factor', 'deviation_percent');
       const empiricalKGrade = this._getAttr('empirical_k_factor', 'insulation_grade');
       const empiricalKAuto = this._getAttr('empirical_k_factor', 'auto_calibrated');
