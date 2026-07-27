@@ -474,17 +474,22 @@ class ThermalBalanceCoordinator:
         g_solar_factor = 0.20 if self.curtains_closed else 0.70
         p_solar = self.window_area * self.solar_val * g_solar_factor
 
+        # Sample empirical K-factor only during steady-state (not during rapid temperature drawdown)
         if not self.window_is_open and delta_t_env >= 1.5:
             if self.ac_power_val >= 50.0 and p_cooling_sensible > 0:
                 p_needed = p_cooling_sensible - p_solar
                 if p_needed > 0:
                     k_instant = p_needed / delta_t_env
-                    # Cap instant K to max 3x theoretical HLC to prevent transient startup boost spikes
-                    max_valid_k = max(40.0, 3.0 * self.hlc_theoretical)
-                    if 3.0 <= k_instant <= max_valid_k:
+                    # Instant K is bounded between 0.5x and 2.0x theoretical HLC to prevent mass-cooling distortion
+                    min_valid_k = 0.5 * self.hlc_theoretical
+                    max_valid_k = 2.0 * self.hlc_theoretical
+                    if min_valid_k <= k_instant <= max_valid_k:
                         alpha = 0.02 if self._k_samples_count > 50 else 0.05
                         self.empirical_k_val = (1.0 - alpha) * self.empirical_k_val + alpha * k_instant
                         self._k_samples_count += 1
+
+        # Always strictly bound empirical_k_val between 0.5x and 2.0x theoretical HLC
+        self.empirical_k_val = max(0.5 * self.hlc_theoretical, min(2.0 * self.hlc_theoretical, self.empirical_k_val))
 
         if self.use_empirical_hlc and self._k_samples_count >= 5:
             self.hlc_closed = self.empirical_k_val
