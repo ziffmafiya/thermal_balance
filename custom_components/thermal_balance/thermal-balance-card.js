@@ -927,7 +927,7 @@ class ThermalBalanceCard extends HTMLElement {
               <!-- COLUMN 2: 24h Trend Chart & Energy Accumulators -->
               <div class="card-col col-right">
                 <!-- 24H ECHARTS TREND -->
-                <div class="section">
+                <div class="section" style="flex: 1; display: flex; flex-direction: column;">
                   <div class="section-title">
                     ${this._icons.trend}
                     <span>24h Thermal Trend</span>
@@ -936,7 +936,7 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="legend-item"><span class="legend-dot" style="background:#4DA3FF"></span>Cooling</span>
                     </div>
                   </div>
-                  <div id="echart-container" style="width: 100%; height: 200px; margin-top: 4px;">${trendSvg}</div>
+                  <div id="echart-container" style="width: 100%; flex: 1; min-height: 200px; margin-top: 4px;">${trendSvg}</div>
                 </div>
 
                 <!-- ENERGY & COSTS -->
