@@ -1,0 +1,465 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  🌡️  THERMAL BALANCE — Premium Lovelace Dashboard Card     ║
+# ║                                                            ║
+# ║  HOW TO USE:                                               ║
+# ║  1. In HA go to your Dashboard → Edit → + Add Card         ║
+# ║  2. Choose "Manual" (YAML editor)                          ║
+# ║  3. Paste everything below the "---" line                  ║
+# ║  4. Replace entity IDs if your device name differs.        ║
+# ║                                                            ║
+# ║  ENTITY ID PATTERN:                                        ║
+# ║  sensor.<device_slug>_<sensor_name_slug>                   ║
+# ║  Example: if device = "Thermal Balance (17.0 m²)"          ║
+# ║    → sensor.thermal_balance_17_0_m_heat_gain               ║
+# ║  Check your actual entity IDs in Settings → Entities.      ║
+# ║                                                            ║
+# ║  REQUIRED CUSTOM CARDS (install via HACS → Frontend):      ║
+# ║  • mushroom (mushroom-cards)                               ║
+# ║  • mini-graph-card                                         ║
+# ║  • stack-in-card                                           ║
+# ║  • card-mod                                                ║
+# ╚══════════════════════════════════════════════════════════════╝
+---
+type: vertical-stack
+cards:
+  # ──────────────────────────────────────────────
+  # HEADER — Title banner with gradient
+  # ──────────────────────────────────────────────
+  - type: custom:mushroom-template-card
+    primary: Thermal Balance
+    secondary: >-
+      {{ states('sensor.thermal_balance_17_0_m_net_balance') }} W net
+      · COP {{ states('sensor.thermal_balance_17_0_m_ac_cop') }}
+    icon: mdi:home-thermometer
+    icon_color: |
+      {% set net = states('sensor.thermal_balance_17_0_m_net_balance') | float(0) %}
+      {% if net > 100 %} red
+      {% elif net < -100 %} blue
+      {% else %} green
+      {% endif %}
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(30, 40, 60, 0.95) 0%,
+            rgba(15, 25, 50, 0.98) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.15);
+          border-radius: 16px;
+          box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+        }
+        mushroom-state-info {
+          --card-primary-font-size: 22px;
+          --card-primary-font-weight: 700;
+          --card-primary-color: #e8f0ff;
+          --card-secondary-color: rgba(180, 210, 255, 0.7);
+          --card-secondary-font-size: 13px;
+        }
+        mushroom-shape-icon {
+          --shape-color: rgba(80, 160, 255, 0.15) !important;
+        }
+
+  # ──────────────────────────────────────────────
+  # ROW 1 — Live Power Gauges (Heat vs Cool)
+  # ──────────────────────────────────────────────
+  - type: custom:stack-in-card
+    mode: horizontal
+    keep:
+      outer_padding: false
+      margin: false
+      border_radius: true
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(25, 35, 55, 0.92) 0%,
+            rgba(20, 28, 48, 0.95) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.08);
+          border-radius: 14px;
+        }
+    cards:
+      # Heat Gain gauge
+      - type: gauge
+        entity: sensor.thermal_balance_17_0_m_heat_gain
+        name: "☀️ Heat Gain"
+        unit: W
+        min: 0
+        max: 3500
+        needle: true
+        severity:
+          green: 0
+          yellow: 1000
+          red: 2000
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+
+      # AC Cooling gauge
+      - type: gauge
+        entity: sensor.thermal_balance_17_0_m_ac_cooling
+        name: "❄️ AC Cooling"
+        unit: W
+        min: 0
+        max: 3500
+        needle: true
+        severity:
+          green: 0
+          yellow: 1500
+          red: 2800
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+
+  # ──────────────────────────────────────────────
+  # ROW 2 — Key Metrics (4 mushroom chips)
+  # ──────────────────────────────────────────────
+  - type: custom:mushroom-chips-card
+    alignment: center
+    card_mod:
+      style: |
+        ha-card {
+          background: transparent !important;
+          box-shadow: none !important;
+          --chip-background: rgba(40, 55, 85, 0.7);
+          --chip-border-radius: 10px;
+          --chip-font-size: 12px;
+          --chip-padding: 0 10px;
+          --chip-height: 36px;
+        }
+    chips:
+      - type: template
+        icon: mdi:scale-balance
+        icon_color: |
+          {% set v = states('sensor.thermal_balance_17_0_m_net_balance') | float(0) %}
+          {% if v > 50 %} deep-orange
+          {% elif v < -50 %} light-blue
+          {% else %} green
+          {% endif %}
+        content: "{{ states('sensor.thermal_balance_17_0_m_net_balance') }} W"
+        tap_action:
+          action: more-info
+          entity: sensor.thermal_balance_17_0_m_net_balance
+
+      - type: template
+        icon: mdi:speedometer
+        icon_color: cyan
+        content: "COP {{ states('sensor.thermal_balance_17_0_m_ac_cop') }}"
+        tap_action:
+          action: more-info
+          entity: sensor.thermal_balance_17_0_m_ac_cop
+
+      - type: template
+        icon: mdi:clock-fast
+        icon_color: |
+          {% set dir = state_attr('sensor.thermal_balance_17_0_m_time_to_1_c', 'direction') %}
+          {% if dir == 'heating' %} orange
+          {% elif dir == 'cooling' %} light-blue
+          {% else %} green
+          {% endif %}
+        content: >-
+          {% set m = states('sensor.thermal_balance_17_0_m_time_to_1_c') | float(0) %}
+          {% set dir = state_attr('sensor.thermal_balance_17_0_m_time_to_1_c', 'direction') %}
+          {% if dir == 'heating' %}🔺{% elif dir == 'cooling' %}🔻{% else %}⚖️{% endif %}
+          {% if m >= 60 %}{{ (m/60)|int }}h {{ (m%60)|int }}m
+          {% else %}{{ m|int }} min{% endif %}
+        tap_action:
+          action: more-info
+          entity: sensor.thermal_balance_17_0_m_time_to_1_c
+
+      - type: template
+        icon: mdi:water-outline
+        icon_color: teal
+        content: "{{ states('sensor.thermal_balance_17_0_m_condensation_rate') }} L/h"
+        tap_action:
+          action: more-info
+          entity: sensor.thermal_balance_17_0_m_condensation_rate
+
+  # ──────────────────────────────────────────────
+  # ROW 3 — Live Graph: Heat Gain vs AC Cooling
+  # ──────────────────────────────────────────────
+  - type: custom:mini-graph-card
+    name: Thermal Power (1h)
+    icon: mdi:chart-areaspline
+    hours_to_show: 1
+    points_per_hour: 30
+    line_width: 2
+    animate: true
+    show:
+      labels: true
+      legend: true
+      fill: fade
+    color_thresholds_transition: smooth
+    entities:
+      - entity: sensor.thermal_balance_17_0_m_heat_gain
+        name: Heat Gain
+        color: "#ff6b35"
+        show_fill: true
+      - entity: sensor.thermal_balance_17_0_m_ac_cooling
+        name: AC Cooling
+        color: "#4fc3f7"
+        show_fill: true
+      - entity: sensor.thermal_balance_17_0_m_net_balance
+        name: Net Balance
+        color: "#66bb6a"
+        show_fill: false
+        show_line: true
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(25, 35, 55, 0.92) 0%,
+            rgba(20, 28, 48, 0.95) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.08);
+          border-radius: 14px;
+        }
+
+  # ──────────────────────────────────────────────
+  # ROW 4 — AC Performance Details
+  # ──────────────────────────────────────────────
+  - type: custom:stack-in-card
+    mode: vertical
+    keep:
+      outer_padding: true
+      margin: false
+      border_radius: true
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(25, 35, 55, 0.92) 0%,
+            rgba(20, 28, 48, 0.95) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.08);
+          border-radius: 14px;
+        }
+    cards:
+      - type: custom:mushroom-template-card
+        primary: AC Performance
+        icon: mdi:snowflake
+        icon_color: light-blue
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+              --card-primary-font-size: 16px;
+              --card-primary-font-weight: 600;
+              --card-primary-color: #c0d8ff;
+            }
+            mushroom-shape-icon {
+              --shape-color: rgba(80, 180, 255, 0.12) !important;
+            }
+
+      - type: entities
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+            }
+            .card-content {
+              padding: 0 16px !important;
+            }
+        entities:
+          - type: custom:mushroom-template-card
+            primary: "ΔT AC"
+            secondary: >-
+              {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'delta_t_ac_c') }}°C
+              (exit {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'ac_exit_temperature_c') }}°C)
+            icon: mdi:thermometer-chevron-down
+            icon_color: cyan
+            card_mod:
+              style: |
+                ha-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+
+          - type: custom:mushroom-template-card
+            primary: "Sensible / Latent Split"
+            secondary: >-
+              {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'sensible_cooling_w') }} W sensible
+              · {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'latent_cooling_w') }} W latent
+              (SHR {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'shr_percent') }}%)
+            icon: mdi:water-thermometer
+            icon_color: teal
+            card_mod:
+              style: |
+                ha-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+
+          - type: custom:mushroom-template-card
+            primary: "Air Enthalpy"
+            secondary: >-
+              h_in = {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'air_enthalpy_in_kj_kg') }} kJ/kg
+              · Airflow {{ state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'ac_airflow_m3h') }} m³/h
+            icon: mdi:air-filter
+            icon_color: amber
+            card_mod:
+              style: |
+                ha-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+
+          - type: custom:mushroom-template-card
+            primary: "Dew Points"
+            secondary: >-
+              {% set dp_in = state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'indoor_dew_point_c') %}
+              {% set dp_out = state_attr('sensor.thermal_balance_17_0_m_ac_cooling', 'outdoor_dew_point_c') %}
+              Indoor {{ dp_in if dp_in is not none else '—' }}°C
+              · Outdoor {{ dp_out if dp_out is not none else '—' }}°C
+            icon: mdi:water-opacity
+            icon_color: indigo
+            card_mod:
+              style: |
+                ha-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+
+  # ──────────────────────────────────────────────
+  # ROW 5 — Energy Accumulators
+  # ──────────────────────────────────────────────
+  - type: custom:stack-in-card
+    mode: vertical
+    keep:
+      outer_padding: true
+      margin: false
+      border_radius: true
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(25, 35, 55, 0.92) 0%,
+            rgba(20, 28, 48, 0.95) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.08);
+          border-radius: 14px;
+        }
+    cards:
+      - type: custom:mushroom-template-card
+        primary: Energy Totals
+        icon: mdi:lightning-bolt
+        icon_color: amber
+        card_mod:
+          style: |
+            ha-card {
+              background: transparent !important;
+              box-shadow: none !important;
+              border: none !important;
+              --card-primary-font-size: 16px;
+              --card-primary-font-weight: 600;
+              --card-primary-color: #c0d8ff;
+            }
+            mushroom-shape-icon {
+              --shape-color: rgba(255, 180, 50, 0.12) !important;
+            }
+
+      - type: custom:stack-in-card
+        mode: horizontal
+        keep:
+          outer_padding: false
+          margin: false
+          border_radius: true
+        card_mod:
+          style: |
+            ha-card { background: transparent !important; box-shadow: none !important; border: none !important; }
+        cards:
+          # Daily Balance
+          - type: custom:mushroom-template-card
+            primary: Daily
+            secondary: "{{ states('sensor.thermal_balance_17_0_m_daily_balance') }} kWh"
+            icon: mdi:calendar-today
+            icon_color: |
+              {% set v = states('sensor.thermal_balance_17_0_m_daily_balance') | float(0) %}
+              {% if v > 0 %} deep-orange {% elif v < 0 %} light-blue {% else %} green {% endif %}
+            layout: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(40, 55, 85, 0.5) !important;
+                  box-shadow: none !important;
+                  border: 1px solid rgba(100, 180, 255, 0.06) !important;
+                  border-radius: 12px !important;
+                  margin: 4px !important;
+                }
+
+          # Total Balance
+          - type: custom:mushroom-template-card
+            primary: Total
+            secondary: "{{ states('sensor.thermal_balance_17_0_m_total_balance') }} kWh"
+            icon: mdi:sigma
+            icon_color: purple
+            layout: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(40, 55, 85, 0.5) !important;
+                  box-shadow: none !important;
+                  border: 1px solid rgba(100, 180, 255, 0.06) !important;
+                  border-radius: 12px !important;
+                  margin: 4px !important;
+                }
+
+          # Heat Absorbed
+          - type: custom:mushroom-template-card
+            primary: Heat In
+            secondary: "{{ states('sensor.thermal_balance_17_0_m_heat_absorbed') }} kWh"
+            icon: mdi:fire
+            icon_color: deep-orange
+            layout: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(40, 55, 85, 0.5) !important;
+                  box-shadow: none !important;
+                  border: 1px solid rgba(100, 180, 255, 0.06) !important;
+                  border-radius: 12px !important;
+                  margin: 4px !important;
+                }
+
+          # AC Energy
+          - type: custom:mushroom-template-card
+            primary: AC Out
+            secondary: "{{ states('sensor.thermal_balance_17_0_m_ac_energy') }} kWh"
+            icon: mdi:snowflake-thermometer
+            icon_color: light-blue
+            layout: vertical
+            card_mod:
+              style: |
+                ha-card {
+                  background: rgba(40, 55, 85, 0.5) !important;
+                  box-shadow: none !important;
+                  border: 1px solid rgba(100, 180, 255, 0.06) !important;
+                  border-radius: 12px !important;
+                  margin: 4px !important;
+                }
+
+  # ──────────────────────────────────────────────
+  # ROW 6 — Daily Energy Graph (24h)
+  # ──────────────────────────────────────────────
+  - type: custom:mini-graph-card
+    name: Energy Balance (24h)
+    icon: mdi:chart-bar
+    hours_to_show: 24
+    points_per_hour: 4
+    line_width: 2
+    animate: true
+    show:
+      labels: true
+      legend: true
+      fill: fade
+    entities:
+      - entity: sensor.thermal_balance_17_0_m_heat_absorbed
+        name: Heat Absorbed
+        color: "#ff7043"
+      - entity: sensor.thermal_balance_17_0_m_ac_energy
+        name: AC Cooling Energy
+        color: "#29b6f6"
+    card_mod:
+      style: |
+        ha-card {
+          background: linear-gradient(135deg,
+            rgba(25, 35, 55, 0.92) 0%,
+            rgba(20, 28, 48, 0.95) 100%);
+          border: 1px solid rgba(100, 180, 255, 0.08);
+          border-radius: 14px;
+        }

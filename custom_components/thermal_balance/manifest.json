@@ -1,0 +1,11 @@
+{
+  "domain": "thermal_balance",
+  "name": "Thermal Balance",
+  "codeowners": ["@ziffmafiya"],
+  "config_flow": true,
+  "documentation": "https://github.com/ziffmafiya/thermal_balance",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/ziffmafiya/thermal_balance/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

@@ -1,0 +1,93 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Thermal Balance Setup",
+        "description": "Configure room parameters and select input sensors.",
+        "data": {
+          "room_area": "Room Area",
+          "ceiling_height": "Ceiling Height",
+          "window_area": "Window Glazing Area",
+          "external_walls_fraction": "External Walls Fraction",
+          "ac_max_cooling": "Max AC Cooling Capacity",
+          "ac_airflow": "AC Airflow Volume",
+          "u_wall": "Wall U-value",
+          "u_window": "Window U-value",
+          "sensor_t_in": "Indoor Temperature",
+          "sensor_t_out": "Outdoor Temperature",
+          "sensor_t_ac_exit": "AC Outlet Air Temperature",
+          "sensor_rh_in": "Indoor Humidity",
+          "sensor_rh_out": "Outdoor Humidity",
+          "sensor_solar": "Solar Radiation",
+          "sensor_ac_power": "AC Power Consumption",
+          "sensor_window": "Window State"
+        },
+        "data_description": {
+          "room_area": "Floor area of the room in m²",
+          "ceiling_height": "Height of the ceiling in meters",
+          "window_area": "Total glazing area facing outside in m²",
+          "external_walls_fraction": "How many walls face outside (0.25 = 1 of 4, 0.50 = 2 of 4, etc.)",
+          "ac_max_cooling": "Maximum cooling output of your AC unit in Watts (from spec sheet)",
+          "ac_airflow": "Airflow volume of the indoor AC unit in m³/h (from spec sheet)",
+          "u_wall": "Wall thermal transmittance W/(m²·K) — lower = better insulated",
+          "u_window": "Window thermal transmittance W/(m²·K) — lower = better insulated",
+          "sensor_t_in": "Sensor providing indoor air temperature in °C",
+          "sensor_t_out": "Sensor providing outdoor air temperature in °C",
+          "sensor_t_ac_exit": "Sensor or input_number with measured air temperature at AC louver outlet in °C (optional)",
+          "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
+          "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
+          "sensor_solar": "Sensor providing solar irradiance in W/m²",
+          "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
+          "sensor_window": "Binary sensor indicating window open/closed state (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_sensor": "Selected entity is invalid or does not exist."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Thermal Balance Options",
+        "description": "Update room parameters and sensor mappings.",
+        "data": {
+          "room_area": "Room Area",
+          "ceiling_height": "Ceiling Height",
+          "window_area": "Window Glazing Area",
+          "external_walls_fraction": "External Walls Fraction",
+          "ac_max_cooling": "Max AC Cooling Capacity",
+          "ac_airflow": "AC Airflow Volume",
+          "u_wall": "Wall U-value",
+          "u_window": "Window U-value",
+          "sensor_t_in": "Indoor Temperature",
+          "sensor_t_out": "Outdoor Temperature",
+          "sensor_t_ac_exit": "AC Outlet Air Temperature",
+          "sensor_rh_in": "Indoor Humidity",
+          "sensor_rh_out": "Outdoor Humidity",
+          "sensor_solar": "Solar Radiation",
+          "sensor_ac_power": "AC Power Consumption",
+          "sensor_window": "Window State"
+        },
+        "data_description": {
+          "room_area": "Floor area of the room in m²",
+          "ceiling_height": "Height of the ceiling in meters",
+          "window_area": "Total glazing area facing outside in m²",
+          "external_walls_fraction": "How many walls face outside (0.25 = 1 of 4, 0.50 = 2 of 4, etc.)",
+          "ac_max_cooling": "Maximum cooling output of your AC unit in Watts (from spec sheet)",
+          "ac_airflow": "Airflow volume of the indoor AC unit in m³/h (from spec sheet)",
+          "u_wall": "Wall thermal transmittance W/(m²·K) — lower = better insulated",
+          "u_window": "Window thermal transmittance W/(m²·K) — lower = better insulated",
+          "sensor_t_in": "Sensor providing indoor air temperature in °C",
+          "sensor_t_out": "Sensor providing outdoor air temperature in °C",
+          "sensor_t_ac_exit": "Sensor or input_number with measured air temperature at AC louver outlet in °C (optional)",
+          "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
+          "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
+          "sensor_solar": "Sensor providing solar irradiance in W/m²",
+          "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
+          "sensor_window": "Binary sensor indicating window open/closed state (optional)"
+        }
+      }
+    }
+  }
+}
