@@ -475,12 +475,14 @@ class ThermalBalanceCoordinator:
         p_solar = self.window_area * self.solar_val * g_solar_factor
 
         if not self.window_is_open and delta_t_env >= 1.5:
-            if self.ac_power_val >= 20.0 and p_cooling_sensible > 0:
+            if self.ac_power_val >= 50.0 and p_cooling_sensible > 0:
                 p_needed = p_cooling_sensible - p_solar
                 if p_needed > 0:
                     k_instant = p_needed / delta_t_env
-                    if 3.0 <= k_instant <= 200.0:
-                        alpha = 0.02 if self._k_samples_count > 50 else 0.1
+                    # Cap instant K to max 3x theoretical HLC to prevent transient startup boost spikes
+                    max_valid_k = max(40.0, 3.0 * self.hlc_theoretical)
+                    if 3.0 <= k_instant <= max_valid_k:
+                        alpha = 0.02 if self._k_samples_count > 50 else 0.05
                         self.empirical_k_val = (1.0 - alpha) * self.empirical_k_val + alpha * k_instant
                         self._k_samples_count += 1
 
