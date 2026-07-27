@@ -412,23 +412,16 @@ class ThermalBalanceCard extends HTMLElement {
 
   _sampleHistory(key, liveVal, numPoints = 288) {
     const eid = this._resolveEntity(key);
-    const result = new Array(numPoints).fill(0);
-
     if (!eid || !this._historyData || !this._historyData[eid]) {
-      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = liveVal;
-      }
-      return result;
+      return null;
     }
 
     const items = this._historyData[eid];
     if (!Array.isArray(items) || items.length === 0) {
-      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = liveVal;
-      }
-      return result;
+      return null;
     }
 
+    const result = new Array(numPoints).fill(0);
     const now = Date.now() / 1000;
     const start = now - 86400;
     const interval = 86400 / (numPoints - 1);
@@ -475,6 +468,7 @@ class ThermalBalanceCard extends HTMLElement {
 
   _getTrendPoints(key, liveVal, numPoints = 288) {
     const raw = this._sampleHistory(key, liveVal, numPoints);
+    if (!raw) return null;
     return this._smoothPoints(raw);
   }
 
@@ -511,6 +505,7 @@ class ThermalBalanceCard extends HTMLElement {
   }
 
   _renderTrendSvg(heatPoints, coolPoints) {
+    if (!heatPoints && !coolPoints) return '';
     const width = 300;
     const height = 65;
     const all = [...(heatPoints || []), ...(coolPoints || [])];
@@ -555,6 +550,16 @@ class ThermalBalanceCard extends HTMLElement {
       if (this._chart && !this._chart.isDisposed()) {
         try { this._chart.dispose(); } catch(e){}
       }
+
+      const numPoints = 288;
+      const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
+      const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
+      const netPoints = this._getTrendPoints('net_balance', this._getState('net_balance'), numPoints);
+
+      if (!heatPoints && !coolPoints && !netPoints) {
+        return;
+      }
+
       this._chart = echarts.init(container, null, { renderer: 'canvas' });
 
       const numPoints = 288;
