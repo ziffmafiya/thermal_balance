@@ -23,6 +23,7 @@ from .const import (
     SENSOR_AC_HEAT_OUTPUT,
     SENSOR_AC_THERMAL_ENERGY_TOTAL,
     SENSOR_DAILY_THERMAL_BALANCE,
+    SENSOR_EMPIRICAL_K_FACTOR,
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_INSTANT_NET_BALANCE,
     SENSOR_NET_THERMAL_BALANCE,
@@ -116,6 +117,14 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    ThermalBalanceSensorEntityDescription(
+        key=SENSOR_EMPIRICAL_K_FACTOR,
+        name="Empirical K-Factor",
+        native_unit_of_measurement="W/K",
+        device_class=None,
+        state_class=SensorStateClass.MEASUREMENT,
+        is_restorable=True,
+    ),
 )
 
 
@@ -179,6 +188,8 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
                         self.coordinator.total_heat_absorbed = restored_val
                     elif self.entity_description.key == SENSOR_AC_THERMAL_ENERGY_TOTAL:
                         self.coordinator.ac_thermal_energy_total = restored_val
+                    elif self.entity_description.key == SENSOR_EMPIRICAL_K_FACTOR:
+                        self.coordinator.empirical_k_val = restored_val
                     elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE:
                         if last_state.attributes and "daily_heat_absorbed" in last_state.attributes:
                             self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])

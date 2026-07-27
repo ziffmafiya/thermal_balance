@@ -23,6 +23,7 @@ from .const import (
     CONF_SENSOR_WINDOW,
     CONF_U_WALL,
     CONF_U_WINDOW,
+    CONF_USE_EMPIRICAL_HLC,
     CONF_WINDOW_AREA,
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
@@ -31,6 +32,7 @@ from .const import (
     DEFAULT_ROOM_AREA,
     DEFAULT_U_WALL,
     DEFAULT_U_WINDOW,
+    DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
     DOMAIN,
 )
@@ -125,6 +127,10 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
                 min=0.1, max=10.0, step=0.01, unit_of_measurement="W/(m²·K)", mode=selector.NumberSelectorMode.BOX
             )
         ),
+        vol.Optional(
+            CONF_USE_EMPIRICAL_HLC,
+            default=bool(defaults.get(CONF_USE_EMPIRICAL_HLC, DEFAULT_USE_EMPIRICAL_HLC)),
+        ): selector.BooleanSelector(),
     }
 
     # Entity selectors (Required - allows sensor or input_number)

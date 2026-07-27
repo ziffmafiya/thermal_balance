@@ -25,6 +25,7 @@ from .const import (
     CONF_SENSOR_WINDOW,
     CONF_U_WALL,
     CONF_U_WINDOW,
+    CONF_USE_EMPIRICAL_HLC,
     CONF_WINDOW_AREA,
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
@@ -33,6 +34,7 @@ from .const import (
     DEFAULT_ROOM_AREA,
     DEFAULT_U_WALL,
     DEFAULT_U_WINDOW,
+    DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
     DOMAIN,
     SENSOR_AC_CARNOT_COP,
@@ -40,6 +42,7 @@ from .const import (
     SENSOR_AC_HEAT_OUTPUT,
     SENSOR_AC_THERMAL_ENERGY_TOTAL,
     SENSOR_DAILY_THERMAL_BALANCE,
+    SENSOR_EMPIRICAL_K_FACTOR,
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_INSTANT_NET_BALANCE,
     SENSOR_NET_THERMAL_BALANCE,
@@ -122,8 +125,14 @@ class ThermalBalanceCoordinator:
         # External wall area calculation taking external_walls_fraction into account
         a_total_external = (4.0 * math.sqrt(self.room_area) * self.ceiling_height) * self.external_walls_fraction
         self.a_wall: float = max(0.0, a_total_external - self.window_area)
-        self.hlc_closed: float = (self.a_wall * self.u_wall) + (self.window_area * self.u_window)
+        self.hlc_theoretical: float = (self.a_wall * self.u_wall) + (self.window_area * self.u_window)
+        self.use_empirical_hlc: bool = bool(options.get(CONF_USE_EMPIRICAL_HLC, data.get(CONF_USE_EMPIRICAL_HLC, DEFAULT_USE_EMPIRICAL_HLC)))
+        self.hlc_closed: float = self.hlc_theoretical
         self.hlc_vent: float = 4.0 * self.volume * 0.336
+
+        # Empirical K-Factor auto-calibration variables
+        self.empirical_k_val: float = self.hlc_theoretical
+        self._k_samples_count: int = 0
 
         # Air mass flow rate (kg/s)
         self.air_mass_flow_kg_s: float = 1.20 * (self.ac_airflow / 3600.0)
@@ -160,6 +169,7 @@ class ThermalBalanceCoordinator:
             SENSOR_TOTAL_HEAT_ABSORBED: 0.0,
             SENSOR_AC_THERMAL_ENERGY_TOTAL: 0.0,
             SENSOR_AC_CONDENSATION_RATE: 0.0,
+            SENSOR_EMPIRICAL_K_FACTOR: round(self.empirical_k_val, 2),
         }
 
         # Extra attributes dictionary
@@ -384,18 +394,6 @@ class ThermalBalanceCoordinator:
         h_in_kj_kg = _calculate_enthalpy(self.t_in_val, self.rh_in_val)
         w_in = _calculate_humidity_ratio(self.t_in_val, self.rh_in_val)
 
-        # Step 2: Heat Loss Coefficient HLC (Transmission + Ventilation when window open)
-        hlc = self.hlc_closed + (self.hlc_vent if self.window_is_open else 0.0)
-
-        # Step 3: Instantaneous Powers (Watts)
-        # 1. Environmental heat exchange P_env, ventilation heat P_vent, conduction P_wall and Heat Gain P_gain
-        p_wall = self.hlc_closed * (self.t_out_val - self.t_in_val)
-        p_vent = (self.hlc_vent * (self.t_out_val - self.t_in_val)) if self.window_is_open else 0.0
-        p_trans = p_wall + p_vent
-        p_solar = self.window_area * self.solar_val * 0.70
-        p_env = p_trans + p_solar
-        p_gain = max(0.0, p_env)
-
         # 2. AC Cooling P_cooling and Psychrometric Sensible/Latent Split (SHR)
         if self.ac_power_val < 20.0:
             cop_real = 0.0
@@ -450,6 +448,45 @@ class ThermalBalanceCoordinator:
             # Condensation rate (Liters / Hour): 1 Liter water = 2260 kJ latent heat (627.8 W·h/L)
             condensation_rate_lh = p_cooling_latent / 627.8
 
+        # Step 2: Empirical K-Factor Estimation & Active Heat Loss Coefficient HLC
+        delta_t_env = abs(self.t_out_val - self.t_in_val)
+        p_solar = self.window_area * self.solar_val * 0.70
+
+        if not self.window_is_open and delta_t_env >= 1.5:
+            if self.ac_power_val >= 20.0 and p_cooling_sensible > 0:
+                p_needed = p_cooling_sensible - p_solar
+                if p_needed > 0:
+                    k_instant = p_needed / delta_t_env
+                    if 3.0 <= k_instant <= 200.0:
+                        alpha = 0.02 if self._k_samples_count > 50 else 0.1
+                        self.empirical_k_val = (1.0 - alpha) * self.empirical_k_val + alpha * k_instant
+                        self._k_samples_count += 1
+
+        if self.use_empirical_hlc and self._k_samples_count >= 5:
+            self.hlc_closed = self.empirical_k_val
+        else:
+            self.hlc_closed = self.hlc_theoretical
+
+        dev_pct = ((self.empirical_k_val - self.hlc_theoretical) / max(0.1, self.hlc_theoretical)) * 100.0
+        if dev_pct <= 15.0:
+            insulation_grade = "Отличная (соответствует паспорту)"
+        elif dev_pct <= 35.0:
+            insulation_grade = "Хорошая (умеренные утечки)"
+        elif dev_pct <= 65.0:
+            insulation_grade = "Удовлетворительная (есть мостики холода)"
+        else:
+            insulation_grade = "Низкая (высокие утечки / сквозняки)"
+
+        hlc = self.hlc_closed + (self.hlc_vent if self.window_is_open else 0.0)
+
+        # Step 3: Instantaneous Powers (Watts)
+        # 1. Environmental heat exchange P_env, ventilation heat P_vent, conduction P_wall and Heat Gain P_gain
+        p_wall = self.hlc_closed * (self.t_out_val - self.t_in_val)
+        p_vent = (self.hlc_vent * (self.t_out_val - self.t_in_val)) if self.window_is_open else 0.0
+        p_trans = p_wall + p_vent
+        p_env = p_trans + p_solar
+        p_gain = max(0.0, p_env)
+
         # 3. Net Balance P_net (environmental heat flow minus AC cooling capacity)
         p_net = p_env - p_cooling
         p_net_sensible = p_env - p_cooling_sensible
@@ -486,15 +523,6 @@ class ThermalBalanceCoordinator:
         daily_balance = self.daily_heat_absorbed - self.daily_ac_thermal_energy
         net_balance = self.total_heat_absorbed - self.ac_thermal_energy_total
 
-        # Empirical HLC auto-estimation (W/°C) based on daily thermal energy & delta T
-        delta_t_abs = abs(self.t_out_val - self.t_in_val)
-        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        daily_hours = max(0.1, (now - midnight).total_seconds() / 3600.0)
-        if delta_t_abs >= 0.5 and self.daily_ac_thermal_energy > 0:
-            empirical_hlc = (self.daily_ac_thermal_energy * 1000.0) / (delta_t_abs * daily_hours)
-        else:
-            empirical_hlc = hlc
-
         # Store calculated metrics
         self.data = {
             SENSOR_INSTANT_HEAT_GAIN: round(p_gain, 2),
@@ -507,6 +535,7 @@ class ThermalBalanceCoordinator:
             SENSOR_TOTAL_HEAT_ABSORBED: round(self.total_heat_absorbed, 3),
             SENSOR_AC_THERMAL_ENERGY_TOTAL: round(self.ac_thermal_energy_total, 3),
             SENSOR_AC_CONDENSATION_RATE: round(condensation_rate_lh, 2),
+            SENSOR_EMPIRICAL_K_FACTOR: round(self.empirical_k_val, 2),
         }
 
         # Extra attributes
@@ -548,12 +577,18 @@ class ThermalBalanceCoordinator:
             SENSOR_DAILY_THERMAL_BALANCE: {
                 "daily_heat_absorbed": round(self.daily_heat_absorbed, 3),
                 "daily_ac_thermal_energy": round(self.daily_ac_thermal_energy, 3),
-                "theoretical_hlc_w_c": round(hlc, 2),
-                "measured_hlc_w_c": round(empirical_hlc, 2),
             },
             SENSOR_NET_THERMAL_BALANCE: {
                 "total_heat_absorbed": round(self.total_heat_absorbed, 3),
                 "ac_thermal_energy_total": round(self.ac_thermal_energy_total, 3),
+            },
+            SENSOR_EMPIRICAL_K_FACTOR: {
+                "theoretical_hlc_w_k": round(self.hlc_theoretical, 2),
+                "active_hlc_w_k": round(self.hlc_closed, 2),
+                "deviation_percent": round(dev_pct, 1),
+                "insulation_grade": insulation_grade,
+                "auto_calibrated": self.use_empirical_hlc and self._k_samples_count >= 5,
+                "samples_count": self._k_samples_count,
             },
         }
 

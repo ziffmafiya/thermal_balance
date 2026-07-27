@@ -12,6 +12,7 @@ CONF_U_WINDOW: Final = "u_window"
 CONF_EXTERNAL_WALLS_FRACTION: Final = "external_walls_fraction"
 CONF_AC_MAX_COOLING: Final = "ac_max_cooling"
 CONF_AC_AIRFLOW: Final = "ac_airflow"
+CONF_USE_EMPIRICAL_HLC: Final = "use_empirical_hlc"
 
 CONF_SENSOR_T_IN: Final = "sensor_t_in"
 CONF_SENSOR_T_OUT: Final = "sensor_t_out"
@@ -31,6 +32,7 @@ DEFAULT_WINDOW_AREA: Final = 3.0
 DEFAULT_EXTERNAL_WALLS_FRACTION: Final = 0.25
 DEFAULT_AC_MAX_COOLING: Final = 3350.0
 DEFAULT_AC_AIRFLOW: Final = 370.0  # m³/h (from Cooper&Hunter spec 210/320/370/480)
+DEFAULT_USE_EMPIRICAL_HLC: Final = False
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"
@@ -43,3 +45,5 @@ SENSOR_NET_THERMAL_BALANCE: Final = "net_thermal_balance"
 SENSOR_TOTAL_HEAT_ABSORBED: Final = "total_heat_absorbed"
 SENSOR_AC_THERMAL_ENERGY_TOTAL: Final = "ac_thermal_energy_total"
 SENSOR_AC_CONDENSATION_RATE: Final = "ac_condensation_rate"
+SENSOR_EMPIRICAL_K_FACTOR: Final = "empirical_k_factor"
+

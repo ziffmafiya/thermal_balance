@@ -672,6 +672,12 @@ class ThermalBalanceCard extends HTMLElement {
       const pWall = this._getAttr('heat_gain', 'p_wall_w');
       const windowOpen = this._getAttr('heat_gain', 'window_is_open') ?? this._getAttr('net_balance', 'window_is_open');
 
+      // Empirical K-Factor attributes
+      const empiricalK = this._getState('empirical_k_factor');
+      const empiricalKDev = this._getAttr('empirical_k_factor', 'deviation_percent');
+      const empiricalKGrade = this._getAttr('empirical_k_factor', 'insulation_grade');
+      const empiricalKAuto = this._getAttr('empirical_k_factor', 'auto_calibrated');
+
       // time_to_1c attributes
       const direction = this._getAttr('time_to_1c', 'direction') || 'equilibrium';
       const dirInfo = this._dirIcon(direction);
@@ -792,6 +798,16 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="ac-dot" style="background:#8B5CF6"></span>
                       <span class="ac-label">Стены/Окна (Walls)</span>
                       <span class="ac-val">${pWall !== null && pWall !== undefined ? (pWall > 0 ? '+' : '') + this._fmt(pWall, 0) + ' W' : '—'}</span>
+                    </div>
+                    <div class="ac-row">
+                      <span class="ac-dot" style="background:#00C896"></span>
+                      <span class="ac-label">K-Фактор (Факт)</span>
+                      <span class="ac-val" style="color:#00C896">${empiricalK !== null ? this._fmt(empiricalK, 1) + ' W/K' : '—'} <span class="ac-unit">${empiricalKDev !== null ? '(' + (empiricalKDev > 0 ? '+' : '') + this._fmt(empiricalKDev, 0) + '%)' : ''}</span></span>
+                    </div>
+                    <div class="ac-row">
+                      <span class="ac-dot" style="background:#3B82F6"></span>
+                      <span class="ac-label">Изоляция</span>
+                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || 'Расчётная'}</span>
                     </div>
                   </div>
                 </div>
