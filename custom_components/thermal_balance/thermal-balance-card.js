@@ -460,8 +460,21 @@ class ThermalBalanceCard extends HTMLElement {
     return result;
   }
 
-  _getTrendPoints(key, liveVal, numPoints = 25) {
-    return this._sampleHistory(key, liveVal, numPoints);
+  _smoothPoints(pts) {
+    if (!pts || pts.length < 3) return pts;
+    const len = pts.length;
+    const smoothed = new Array(len);
+    smoothed[0] = pts[0];
+    for (let i = 1; i < len - 1; i++) {
+      smoothed[i] = 0.20 * pts[i - 1] + 0.60 * pts[i] + 0.20 * pts[i + 1];
+    }
+    smoothed[len - 1] = pts[len - 1];
+    return smoothed;
+  }
+
+  _getTrendPoints(key, liveVal, numPoints = 288) {
+    const raw = this._sampleHistory(key, liveVal, numPoints);
+    return this._smoothPoints(raw);
   }
 
   _pointsToPath(points, width, height, maxVal) {
@@ -602,7 +615,9 @@ class ThermalBalanceCard extends HTMLElement {
           {
             name: 'Heat Gain',
             type: 'line',
-            smooth: 0.35,
+            smooth: 0.3,
+            smoothMonotone: 'x',
+            sampling: 'lttb',
             showSymbol: false,
             symbol: 'circle',
             symbolSize: 6,
@@ -619,7 +634,9 @@ class ThermalBalanceCard extends HTMLElement {
           {
             name: 'AC Cooling',
             type: 'line',
-            smooth: 0.35,
+            smooth: 0.3,
+            smoothMonotone: 'x',
+            sampling: 'lttb',
             showSymbol: false,
             symbol: 'circle',
             symbolSize: 6,
