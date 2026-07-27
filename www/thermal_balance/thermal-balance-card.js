@@ -1022,9 +1022,9 @@ class ThermalBalanceCard extends HTMLElement {
   _css() {
     return `
       :host {
-        --tb-primary: #E5E7EB;
-        --tb-secondary: #9CA3AF;
-        --tb-label: #6B7280;
+        --tb-primary: #FFFFFF;
+        --tb-secondary: #D1D5DB;
+        --tb-label: #9CA3AF;
         --tb-heat: #FF7A3C;
         --tb-cool: #4DA3FF;
         --tb-cop: #8B5CF6;
@@ -1032,50 +1032,50 @@ class ThermalBalanceCard extends HTMLElement {
         --tb-neg: #4DA3FF;
         --tb-eq: #00C896;
         --tb-warn: #FACC15;
-        font-family: inherit;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         display: block;
         width: 100%;
         box-sizing: border-box;
       }
       ha-card {
         background: #0B1220;
-        border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(77,163,255,0.25);
-        border: 1px solid rgba(77,163,255,0.2);
+        border-radius: 18px;
+        box-shadow: 0 10px 36px rgba(0,0,0,0.55), 0 0 25px rgba(77,163,255,0.25);
+        border: 1px solid rgba(77,163,255,0.25);
         overflow: hidden;
         color: var(--tb-primary);
         padding: 0;
       }
       .tb-card {
-        padding: 20px;
+        padding: 22px;
         container-type: inline-size;
         container-name: tb-card;
       }
       .advice-banner {
-        padding: 10px 14px;
-        border-radius: 10px;
-        font-size: 12px;
-        line-height: 1.4;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.5;
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 12px;
-        font-weight: 500;
+        gap: 10px;
+        margin-bottom: 14px;
+        font-weight: 600;
       }
       .advice-window {
-        background: rgba(0, 200, 150, 0.12);
-        border: 1px solid rgba(0, 200, 150, 0.3);
-        color: #00C896;
+        background: rgba(0, 200, 150, 0.15);
+        border: 1px solid rgba(0, 200, 150, 0.4);
+        color: #00E6AB;
       }
       .advice-curtains {
-        background: rgba(255, 122, 60, 0.12);
-        border: 1px solid rgba(255, 122, 60, 0.3);
-        color: #FF7A3C;
+        background: rgba(255, 122, 60, 0.15);
+        border: 1px solid rgba(255, 122, 60, 0.4);
+        color: #FF8F56;
       }
       .card-layout {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 18px;
       }
       @container tb-card (min-width: 680px) {
         .card-layout {
@@ -1086,7 +1086,7 @@ class ThermalBalanceCard extends HTMLElement {
       .card-col {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 18px;
       }
       .header {
         display: flex;
@@ -1097,30 +1097,32 @@ class ThermalBalanceCard extends HTMLElement {
       .header-left {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
       }
       .header-icon {
-        width: 36px; height: 36px;
+        width: 40px; height: 40px;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(100,180,255,0.08);
-        border-radius: 10px;
+        background: rgba(100,180,255,0.12);
+        border-radius: 12px;
       }
-      .header-icon svg { width: 20px; height: 20px; }
+      .header-icon svg { width: 24px; height: 24px; }
       .header-title {
-        font-size: 16px;
-        font-weight: 700;
+        font-size: 18px;
+        font-weight: 800;
         letter-spacing: 0.3px;
+        color: #FFFFFF;
       }
       .header-sub {
-        font-size: 11px;
+        font-size: 13px;
         color: var(--tb-secondary);
-        margin-top: 1px;
+        margin-top: 2px;
         letter-spacing: 0.2px;
+        font-weight: 500;
       }
       .header-badge {
-        font-size: 13px;
-        font-weight: 700;
-        padding: 5px 12px;
+        font-size: 15px;
+        font-weight: 800;
+        padding: 6px 14px;
         border-radius: 20px;
         white-space: nowrap;
         transition: color 0.3s ease, background 0.3s ease;
@@ -1128,85 +1130,87 @@ class ThermalBalanceCard extends HTMLElement {
       .gauges-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 14px;
       }
       .gauge-card {
         background: #162032;
-        border-radius: 12px;
+        border-radius: 14px;
         border: 1px solid #233045;
-        padding: 14px 8px 10px;
+        padding: 16px 10px 12px;
         display: flex;
         flex-direction: column;
         align-items: center;
         transition: border-color 0.3s ease;
       }
       .gauge-card:hover {
-        border-color: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
       }
       .gauge-svg {
         width: 100%;
-        max-width: 180px;
+        max-width: 200px;
       }
       .gauge-label {
         display: flex;
         align-items: center;
-        gap: 5px;
-        font-size: 12px;
+        gap: 6px;
+        font-size: 14px;
+        font-weight: 600;
         color: var(--tb-secondary);
-        margin-top: 4px;
+        margin-top: 6px;
       }
       .gauge-icon { display: flex; align-items: center; }
       .metrics-bar {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 8px;
+        gap: 10px;
       }
       .metric-block {
         background: #162032;
         border: 1px solid #233045;
-        border-radius: 10px;
-        padding: 10px 6px;
+        border-radius: 12px;
+        padding: 12px 8px;
         text-align: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 3px;
+        gap: 4px;
         transition: border-color 0.3s ease;
       }
       .metric-block:hover {
-        border-color: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
       }
-      .metric-icon { font-size: 14px; line-height: 1; }
+      .metric-icon { font-size: 16px; line-height: 1; }
       .metric-val {
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 800;
         transition: color 0.3s ease;
         white-space: nowrap;
       }
-      .metric-unit { font-size: 10px; opacity: 0.6; font-weight: 400; }
+      .metric-unit { font-size: 12px; opacity: 0.85; font-weight: 500; }
       .metric-label {
-        font-size: 10px;
+        font-size: 11px;
+        font-weight: 500;
         color: var(--tb-secondary);
         letter-spacing: 0.2px;
       }
       .section {
         background: #162032;
         border: 1px solid #233045;
-        border-radius: 12px;
-        padding: 14px;
+        border-radius: 14px;
+        padding: 16px;
         transition: border-color 0.3s ease;
       }
       .section:hover {
-        border-color: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
       }
       .section-title {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--tb-primary);
-        margin-bottom: 12px;
+        gap: 10px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #FFFFFF;
+        margin-bottom: 14px;
         letter-spacing: 0.3px;
       }
       .section-title svg { flex-shrink: 0; }
@@ -1224,10 +1228,10 @@ class ThermalBalanceCard extends HTMLElement {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 8px;
-        padding: 7px 6px;
+        gap: 10px;
+        padding: 9px 8px;
         border-bottom: 1px solid #233045;
-        font-size: 12px;
+        font-size: 13.5px;
         min-width: 0;
       }
       .ac-row:last-child { border-bottom: none; }
@@ -1235,12 +1239,13 @@ class ThermalBalanceCard extends HTMLElement {
         .ac-row:nth-last-child(-n+2) { border-bottom: none; }
       }
       .ac-dot {
-        width: 5px; height: 5px;
+        width: 7px; height: 7px;
         border-radius: 50%;
         flex-shrink: 0;
       }
       .ac-label {
         color: var(--tb-secondary);
+        font-weight: 500;
         flex: 1;
         min-width: 0;
         overflow: hidden;
@@ -1248,51 +1253,52 @@ class ThermalBalanceCard extends HTMLElement {
         white-space: nowrap;
       }
       .ac-val {
-        font-weight: 600;
-        color: var(--tb-primary);
+        font-weight: 700;
+        color: #FFFFFF;
         white-space: nowrap;
         flex-shrink: 0;
         text-align: right;
       }
       .ac-unit {
         font-weight: 400;
-        font-size: 10px;
-        opacity: 0.5;
+        font-size: 11px;
+        opacity: 0.75;
       }
       .energy-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 8px;
+        gap: 10px;
       }
       .energy-card {
         background: #0B1220;
         border: 1px solid #233045;
-        border-radius: 10px;
-        padding: 12px 10px;
+        border-radius: 12px;
+        padding: 14px 12px;
         text-align: center;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 2px;
+        gap: 3px;
         transition: border-color 0.3s ease;
       }
       .energy-card:hover {
-        border-color: rgba(255,255,255,0.15);
+        border-color: rgba(255,255,255,0.2);
       }
-      .energy-icon { font-size: 16px; margin-bottom: 2px; }
+      .energy-icon { font-size: 20px; margin-bottom: 3px; }
       .energy-val {
-        font-size: 20px;
-        font-weight: 700;
+        font-size: 22px;
+        font-weight: 800;
         transition: color 0.3s ease;
         line-height: 1.2;
       }
       .energy-unit {
-        font-size: 10px;
+        font-size: 12px;
         color: var(--tb-secondary);
-        opacity: 0.7;
+        font-weight: 500;
       }
       .energy-label {
-        font-size: 10px;
+        font-size: 11px;
+        font-weight: 500;
         color: var(--tb-secondary);
         margin-top: 2px;
         letter-spacing: 0.2px;
@@ -1301,18 +1307,19 @@ class ThermalBalanceCard extends HTMLElement {
         margin-left: auto;
         display: flex;
         align-items: center;
-        gap: 12px;
-        font-size: 11px;
+        gap: 14px;
+        font-size: 12.5px;
+        font-weight: 600;
         color: var(--tb-secondary);
       }
       .legend-item {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
       }
       .legend-dot {
-        width: 7px;
-        height: 7px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
       }
       .trend-chart-container {
@@ -1326,7 +1333,7 @@ class ThermalBalanceCard extends HTMLElement {
       }
       @media (max-width: 360px) {
         .metrics-bar { grid-template-columns: repeat(2, 1fr); }
-        .metric-val { font-size: 12px; }
+        .metric-val { font-size: 14px; }
       }
     `;
   }

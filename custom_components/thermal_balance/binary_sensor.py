@@ -73,12 +73,12 @@ class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], B
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
+        self._attr_has_entity_name = True
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
-            name=f"Thermal Balance ({coordinator.room_area:.0f}m²)",
-            manufacturer="Thermal Balance Physics Engine",
-            model="Open-System Thermodynamic Calculator",
-            sw_version="1.6.0",
+            name=entry.title,
+            manufacturer="Custom Integration",
+            model="Thermal Thermodynamics Hub",
         )
 
     @property
