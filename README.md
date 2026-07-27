@@ -2,6 +2,7 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
 [![version](https://img.shields.io/badge/version-v1.0.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fziffmafiya%2Fthermal_balance&category=Integration)
 
 **Thermal Balance** is a physics-based custom integration and Lovelace dashboard card for Home Assistant. It models room thermodynamics as an open system, calculating real-time heat gain, air conditioner cooling output, sensible/latent heat split, ventilation heat exchange, net energy balance, and temperature shift forecasts.
 
