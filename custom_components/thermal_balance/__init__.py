@@ -12,7 +12,7 @@ from .coordinator import ThermalBalanceCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
 
 # Track whether the frontend card has been registered (once per HA session)
 _FRONTEND_REGISTERED = False

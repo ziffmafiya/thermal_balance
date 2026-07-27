@@ -18,6 +18,10 @@ const SENSOR_MAP = {
   ac_energy: ['_ac_thermal_energy_total', '_ac_energy'],
   condensation_rate: ['_ac_condensation_rate', '_condensation_rate'],
   empirical_k_factor: ['_empirical_k_factor', '_empirical_room_k_factor', '_k_factor'],
+  ac_cost: ['_ac_energy_cost', '_energy_cost'],
+  daily_savings: ['_shading_daily_savings', '_daily_savings'],
+  rec_open_window: ['_recommend_open_window'],
+  rec_close_curtains: ['_recommend_close_curtains'],
 };
 
 function loadECharts() {
@@ -409,18 +413,25 @@ class ThermalBalanceCard extends HTMLElement {
     });
   }
 
-  _sampleHistory(key, liveVal, numPoints = 288) {
+  _sampleHistory(key, liveVal, numPoints = 25) {
     const eid = this._resolveEntity(key);
+    const result = new Array(numPoints).fill(0);
+
     if (!eid || !this._historyData || !this._historyData[eid]) {
-      return null;
+      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
+        result[numPoints - 1] = Math.max(0, liveVal);
+      }
+      return result;
     }
 
     const items = this._historyData[eid];
     if (!Array.isArray(items) || items.length === 0) {
-      return null;
+      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
+        result[numPoints - 1] = Math.max(0, liveVal);
+      }
+      return result;
     }
 
-    const result = new Array(numPoints).fill(0);
     const now = Date.now() / 1000;
     const start = now - 86400;
     const interval = 86400 / (numPoints - 1);
@@ -443,11 +454,11 @@ class ThermalBalanceCard extends HTMLElement {
           break;
         }
       }
-      result[i] = currentVal;
+      result[i] = Math.max(0, currentVal);
     }
 
     if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-      result[numPoints - 1] = liveVal;
+      result[numPoints - 1] = Math.max(0, liveVal);
     }
 
     return result;
@@ -467,7 +478,6 @@ class ThermalBalanceCard extends HTMLElement {
 
   _getTrendPoints(key, liveVal, numPoints = 288) {
     const raw = this._sampleHistory(key, liveVal, numPoints);
-    if (!raw) return null;
     return this._smoothPoints(raw);
   }
 
@@ -504,7 +514,6 @@ class ThermalBalanceCard extends HTMLElement {
   }
 
   _renderTrendSvg(heatPoints, coolPoints) {
-    if (!heatPoints && !coolPoints) return '';
     const width = 300;
     const height = 65;
     const all = [...(heatPoints || []), ...(coolPoints || [])];
@@ -545,13 +554,27 @@ class ThermalBalanceCard extends HTMLElement {
     if (!container) return;
 
     loadECharts().then(echarts => {
+      if (!this.shadowRoot || !this.shadowRoot.querySelector('#echart-container')) return;
+      if (this._chart && !this._chart.isDisposed()) {
+        try { this._chart.dispose(); } catch(e){}
+      }
+      this._chart = echarts.init(container, null, { renderer: 'canvas' });
+
+      const numPoints = 288;
+      const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
+      const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
+      const netPoints = this._getTrendPoints('net_balance', this._getState('net_balance'), numPoints);
+
       const nowMs = Date.now();
       const startMs = nowMs - 86400000;
       const intervalMs = 86400000 / (numPoints - 1);
 
-      const heatSeriesData = (heatPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
-      const coolSeriesData = (coolPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
-      const netSeriesData = (netPoints || []).map((v, i) => [startMs + i * intervalMs, Math.round(v)]);
+      const timeLabels = Array.from({ length: numPoints }, (_, i) => {
+        const ptTime = new Date(startMs + i * intervalMs);
+        const hh = ptTime.getHours().toString().padStart(2, '0');
+        const mm = ptTime.getMinutes().toString().padStart(2, '0');
+        return `${hh}:${mm}`;
+      });
 
       const option = {
         backgroundColor: 'transparent',
@@ -572,18 +595,12 @@ class ThermalBalanceCard extends HTMLElement {
           padding: [8, 12],
           textStyle: { color: '#E5E7EB', fontSize: 11 },
           formatter: (params) => {
-            if (!params || params.length === 0) return '';
-            const ptMs = params[0].value[0];
-            const ptDate = new Date(ptMs);
-            const hh = ptDate.getHours().toString().padStart(2, '0');
-            const mm = ptDate.getMinutes().toString().padStart(2, '0');
-            let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${hh}:${mm}</div>`;
+            let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${params[0].name}</div>`;
             params.forEach(p => {
-              const val = p.value[1];
-              const sign = val > 0 ? '+' : '';
+              const sign = p.value > 0 ? '+' : '';
               res += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
                         <span style="width:8px;height:8px;border-radius:50%;background:${p.color}"></span>
-                        <span>${p.seriesName}: <b style="color:#FFF">${sign}${val} W</b></span>
+                        <span>${p.seriesName}: <b style="color:#FFF">${sign}${Math.round(p.value)} W</b></span>
                       </div>`;
             });
             return res;
@@ -596,10 +613,11 @@ class ThermalBalanceCard extends HTMLElement {
           left: 45,
         },
         xAxis: {
-          type: 'time',
+          type: 'category',
           boundaryGap: false,
+          data: timeLabels,
           axisLine: { lineStyle: { color: '#233045' } },
-          axisLabel: { color: '#6B7280', fontSize: 10 },
+          axisLabel: { color: '#6B7280', fontSize: 10, interval: 35 },
           splitLine: { show: false }
         },
         yAxis: {
@@ -626,7 +644,7 @@ class ThermalBalanceCard extends HTMLElement {
                 { offset: 1, color: 'rgba(255, 122, 60, 0.0)' }
               ])
             },
-            data: heatSeriesData
+            data: heatPoints.map(v => Math.round(v))
           },
           {
             name: 'Cooling',
@@ -638,14 +656,14 @@ class ThermalBalanceCard extends HTMLElement {
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color: '#4DA3FF' },
-            lineStyle: { width: 2.0, color: '#4DA3FF' },
+            lineStyle: { width: 2.2, color: '#4DA3FF' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: 'rgba(77, 163, 255, 0.25)' },
                 { offset: 1, color: 'rgba(77, 163, 255, 0.0)' }
               ])
             },
-            data: coolSeriesData
+            data: coolPoints.map(v => Math.round(v))
           },
           {
             name: 'Net',
@@ -664,7 +682,7 @@ class ThermalBalanceCard extends HTMLElement {
                 { offset: 1, color: 'rgba(0, 200, 150, 0.0)' }
               ])
             },
-            data: netSeriesData
+            data: netPoints.map(v => Math.round(v))
           }
         ]
       };
@@ -734,6 +752,13 @@ class ThermalBalanceCard extends HTMLElement {
       const empiricalKGrade = this._getAttr('empirical_k_factor', 'insulation_grade');
       const empiricalKAuto = this._getAttr('empirical_k_factor', 'auto_calibrated');
 
+      // Cost, Savings & Recommendation states
+      const acCost = this._getState('ac_cost');
+      const dailySavings = this._getState('daily_savings');
+      const recOpenWin = this._getState('rec_open_window') === 1 || this._getAttr('rec_open_window', 'state') === 'on' || Boolean(this._getAttr('heat_gain', 'recommend_open_window'));
+      const recCloseCur = this._getState('rec_close_curtains') === 1 || this._getAttr('rec_close_curtains', 'state') === 'on' || Boolean(this._getAttr('heat_gain', 'recommend_close_curtains'));
+      const currencySymbol = this._getAttr('ac_cost', 'unit_of_measurement') || '₴';
+
       // Curtains & Shading attributes
       const curtainsClosed = this._getAttr('heat_gain', 'curtains_closed');
       const curtainsState = this._getAttr('heat_gain', 'curtains_state');
@@ -788,6 +813,17 @@ class ThermalBalanceCard extends HTMLElement {
         <style>${this._css()}</style>
         <ha-card>
           <div class="tb-card">
+
+            <!-- SMART ADVICE BANNERS -->
+            ${recOpenWin ? `
+              <div class="advice-banner advice-window">
+                <span>🍃 <b>Open Window Recommended!</b> Outdoor air is cooler than indoor. Open window for free natural cooling!</span>
+              </div>` : ''}
+            ${recCloseCur ? `
+              <div class="advice-banner advice-curtains">
+                <span>☀️ <b>Close Curtains Recommended!</b> High solar radiation! Close curtains to reduce heat gain & save money.</span>
+              </div>` : ''}
+
             <div class="card-layout">
 
               <!-- COLUMN 1: Thermal Balance, Gauges, Metrics, Ventilation & AC Performance -->
@@ -902,9 +938,9 @@ class ThermalBalanceCard extends HTMLElement {
                   <div id="echart-container" style="width: 100%; height: 200px; margin-top: 4px;">${trendSvg}</div>
                 </div>
 
-                <!-- ENERGY -->
+                <!-- ENERGY & COSTS -->
                 <div class="section">
-                  <div class="section-title">${this._icons.bolt} <span>Energy</span></div>
+                  <div class="section-title">${this._icons.bolt} <span>Energy & Cost Intelligence</span></div>
                   <div class="energy-grid">
                     <div class="energy-card">
                       <div class="energy-icon" style="color:${dailyColor}">📅</div>
@@ -929,6 +965,18 @@ class ThermalBalanceCard extends HTMLElement {
                       <div class="energy-val" style="color:#4DA3FF">${acEnergy !== null ? this._fmt(acEnergy, 1) : '—'}</div>
                       <div class="energy-unit">kWh</div>
                       <div class="energy-label">AC Energy</div>
+                    </div>
+                    <div class="energy-card">
+                      <div class="energy-icon" style="color:#FACC15">💰</div>
+                      <div class="energy-val" style="color:#FACC15">${acCost !== null ? this._fmt(acCost, 2) : '—'}</div>
+                      <div class="energy-unit">${currencySymbol}</div>
+                      <div class="energy-label">AC Cost</div>
+                    </div>
+                    <div class="energy-card">
+                      <div class="energy-icon" style="color:#00C896">🌱</div>
+                      <div class="energy-val" style="color:#00C896">${dailySavings !== null ? this._fmt(dailySavings, 2) : '—'}</div>
+                      <div class="energy-unit">${currencySymbol}/day</div>
+                      <div class="energy-label">Shading Savings</div>
                     </div>
                   </div>
                 </div>
@@ -1003,11 +1051,37 @@ class ThermalBalanceCard extends HTMLElement {
         container-type: inline-size;
         container-name: tb-card;
       }
+      .advice-banner {
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.4;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-weight: 500;
+      }
+      .advice-window {
+        background: rgba(0, 200, 150, 0.12);
+        border: 1px solid rgba(0, 200, 150, 0.3);
+        color: #00C896;
+      }
+      .advice-curtains {
+        background: rgba(255, 122, 60, 0.12);
+        border: 1px solid rgba(255, 122, 60, 0.3);
+        color: #FF7A3C;
+      }
       .card-layout {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+        grid-template-columns: 1fr;
         gap: 16px;
-        align-items: start;
+      }
+      @container tb-card (min-width: 680px) {
+        .card-layout {
+          grid-template-columns: 1fr 1fr;
+          align-items: start;
+        }
       }
       .card-col {
         display: flex;

@@ -1,25 +1,32 @@
 # 🌡️ Thermal Balance — Home Assistant Custom Component & Premium Card
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
-[![version](https://img.shields.io/badge/version-v1.2.5-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
+[![version](https://img.shields.io/badge/version-v1.6.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fziffmafiya%2Fthermal_balance&category=Integration)
 
-**Thermal Balance** is a physics-based custom integration and Lovelace dashboard card for Home Assistant. It models room thermodynamics as an open system, calculating real-time heat gain, solar radiation, air conditioner cooling output, sensible/latent heat split, ventilation heat exchange, smart curtain shading, empirical $K$-factor auto-calibration, net energy balance, and temperature shift forecasts.
+**Thermal Balance** is a physics-based custom integration and Lovelace dashboard card for Home Assistant. It models room thermodynamics as an open system, calculating real-time heat gain, solar radiation, air conditioner cooling output, sensible/latent heat split, ventilation heat exchange, smart curtain shading, empirical $K$-factor auto-calibration, net energy balance, temperature shift forecasts, electricity cost tracking, and smart advice alerts.
 
 ---
 
 ## 🌟 Key Features
 
+* **💡 Smart Advice & Alerts (`binary_sensor`)**:
+  * `binary_sensor.thermal_balance_open_window_recommended`: Triggers when outdoor air is cooler than indoor temperature ($T_{\text{out}} < T_{\text{in}} - 1.0^\circ\text{C}$), suggesting free natural ventilation cooling instead of AC.
+  * `binary_sensor.thermal_balance_close_curtains_recommended`: Triggers under high solar radiation ($I_{\text{solar}} \ge 200\text{ W/m}^2$) when curtains are open, recommending shading to prevent heat influx.
+* **💰 Financial Savings & Cost Calculator**:
+  * Configurable electricity tariff (e.g. `4.32 ₴/kWh`) and currency symbol (`₴` / `UAH`).
+  * `sensor.thermal_balance_ac_energy_cost`: Computes real-time daily AC electricity expense in currency units.
+  * `sensor.thermal_balance_shading_daily_savings`: Calculates money saved per day (₴/day) achieved by smart curtain shading.
 * **☀️ Heat Gain ($P_{\text{gain}}$)**: Calculates solar radiation influx through windows and wall/glass thermal transmission ($P_{\text{wall}}$).
 * **🪟 Smart Curtain Shading & Lux Sensor Integration**: Auto-detects open vs closed curtains via an indoor illuminance sensor (Lux). When curtains are closed, solar heat gain is automatically cut by 70% ($g_{\text{shading}} = 0.20$ vs $0.70$).
 * **🌌 Dual Astronomical Daylight Integration**: Integrates Home Assistant's built-in `sun.sun` entity (state & elevation angle $>0^\circ$) and solar irradiance to distinguish daytime solar shading from nighttime indoor artificial lighting.
 * **❄️ AC Cooling Output ($P_{\text{cooling}}$)**: Computes real-time cooling capacity (Watts), Carnot COP, Sensible Heat Ratio (SHR), exit air temperature at AC louvers, and condensation rate (L/h).
-* **🧮 Empirical K-Factor Auto-Calibration ($HLC_{\text{empirical}}$)**: Exponential Moving Average (EMA) estimation of real-world room heat loss ($W/K$), deviation percentage from architectural specs, and insulation quality rating ("Отличная", "Хорошая", "Средняя", "Низкая"). Includes physical bounds ($0.5\times \dots 2.0\times HLC_{\text{theoretical}}$) and AC startup transient boost filtering.
-* **🪟 Natural Ventilation Heat Exchange ($P_{\text{vent}}$)**: Tracks heat influx or natural cooling loss when windows are opened for ventilation. Automatically infers open window state when AC is off if no binary sensor is configured.
+* **🧮 Empirical K-Factor Auto-Calibration ($HLC_{\text{empirical}}$)**: Exponential Moving Average (EMA) estimation of real-world room heat loss ($W/K$), deviation percentage from architectural specs, and insulation quality rating ("Отличная", "Хорошая", "Средняя", "Низкая").
+* **🪟 Natural Ventilation Heat Exchange ($P_{\text{vent}}$)**: Tracks heat influx or natural cooling loss when windows are opened for ventilation.
 * **⚡ Net Power Balance ($P_{\text{net}}$)**: Instantaneous thermodynamic power balance ($P_{\text{env}} - P_{\text{cooling}}$).
 * **⏱️ Temperature Forecast (Time to 1°C)**: Physics-based calculation of room thermal inertia predicting time to heat up (+1°C) or cool down (-1°C).
-* **📊 Energy Accumulators**: Tracks daily net balance (resets at 00:00) and continuous lifetime energy balance ($E_{\text{total}}$).
-* **📱 2-Column Responsive Lovelace Card**: Premium custom UI card (`custom:thermal-balance-card`) with CSS Container Queries (`@container`), live gauges, performance breakdown, and 24h interactive ECharts trend graphs.
+* **📊 Energy & Cost Accumulators**: Tracks daily net balance, AC electricity cost, curtain shading savings, and continuous lifetime energy balance.
+* **📱 2-Column Responsive Lovelace Card**: Premium custom UI card (`custom:thermal-balance-card`) with CSS Container Queries (`@container`), live gauges, advice banners, cost intelligence cards, and 24h interactive ECharts trend graphs.
 
 ---
 

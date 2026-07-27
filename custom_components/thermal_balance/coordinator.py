@@ -10,9 +10,13 @@ from homeassistant.helpers.event import async_track_state_change_event, async_tr
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS,
+    BINARY_SENSOR_RECOMMEND_OPEN_WINDOW,
     CONF_AC_AIRFLOW,
     CONF_AC_MAX_COOLING,
     CONF_CEILING_HEIGHT,
+    CONF_CURRENCY_SYMBOL,
+    CONF_ELECTRICITY_RATE,
     CONF_EXTERNAL_WALLS_FRACTION,
     CONF_ILLUMINANCE_THRESHOLD,
     CONF_ROOM_AREA,
@@ -32,6 +36,8 @@ from .const import (
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
+    DEFAULT_CURRENCY_SYMBOL,
+    DEFAULT_ELECTRICITY_RATE,
     DEFAULT_EXTERNAL_WALLS_FRACTION,
     DEFAULT_ILLUMINANCE_THRESHOLD,
     DEFAULT_ROOM_AREA,
@@ -42,6 +48,7 @@ from .const import (
     DOMAIN,
     SENSOR_AC_CARNOT_COP,
     SENSOR_AC_CONDENSATION_RATE,
+    SENSOR_AC_ENERGY_COST,
     SENSOR_AC_HEAT_OUTPUT,
     SENSOR_AC_THERMAL_ENERGY_TOTAL,
     SENSOR_DAILY_THERMAL_BALANCE,
@@ -49,6 +56,7 @@ from .const import (
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_INSTANT_NET_BALANCE,
     SENSOR_NET_THERMAL_BALANCE,
+    SENSOR_SHADING_DAILY_SAVINGS,
     SENSOR_TIME_TO_1DEG,
     SENSOR_TOTAL_HEAT_ABSORBED,
 )
@@ -122,6 +130,9 @@ class ThermalBalanceCoordinator:
         self.illuminance_threshold: float = _safe_float(options.get(CONF_ILLUMINANCE_THRESHOLD, data.get(CONF_ILLUMINANCE_THRESHOLD)), DEFAULT_ILLUMINANCE_THRESHOLD)
         self.has_illuminance_sensor: bool = bool(self.sensor_illuminance and isinstance(self.sensor_illuminance, str) and self.sensor_illuminance.strip())
 
+        self.electricity_rate: float = _safe_float(options.get(CONF_ELECTRICITY_RATE, data.get(CONF_ELECTRICITY_RATE, DEFAULT_ELECTRICITY_RATE)), DEFAULT_ELECTRICITY_RATE)
+        self.currency_symbol: str = str(options.get(CONF_CURRENCY_SYMBOL, data.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL)))
+
         # Pre-calculated static thermal capacity values (Step 1)
         self.volume: float = self.room_area * self.ceiling_height
         self.c_air: float = 0.336 * self.volume
@@ -160,13 +171,15 @@ class ThermalBalanceCoordinator:
         self.ac_thermal_energy_total: float = 0.0
         self.daily_heat_absorbed: float = 0.0
         self.daily_ac_thermal_energy: float = 0.0
+        self.daily_ac_elec_kwh: float = 0.0
+        self.daily_shading_heat_saved_kwh: float = 0.0
 
         # Timing for integration
         self.last_update_time: Optional[datetime] = None
         self.last_daily_reset: Optional[datetime] = None
 
         # Output states dictionary
-        self.data: Dict[str, float] = {
+        self.data: Dict[str, Any] = {
             SENSOR_INSTANT_HEAT_GAIN: 0.0,
             SENSOR_AC_HEAT_OUTPUT: 0.0,
             SENSOR_INSTANT_NET_BALANCE: 0.0,
@@ -178,6 +191,10 @@ class ThermalBalanceCoordinator:
             SENSOR_AC_THERMAL_ENERGY_TOTAL: 0.0,
             SENSOR_AC_CONDENSATION_RATE: 0.0,
             SENSOR_EMPIRICAL_K_FACTOR: round(self.empirical_k_val, 2),
+            SENSOR_AC_ENERGY_COST: 0.0,
+            SENSOR_SHADING_DAILY_SAVINGS: 0.0,
+            BINARY_SENSOR_RECOMMEND_OPEN_WINDOW: False,
+            BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS: False,
         }
 
         # Extra attributes dictionary
@@ -393,6 +410,8 @@ class ThermalBalanceCoordinator:
         if self.last_daily_reset is not None and now.date() != self.last_daily_reset.date():
             self.daily_heat_absorbed = 0.0
             self.daily_ac_thermal_energy = 0.0
+            self.daily_ac_elec_kwh = 0.0
+            self.daily_shading_heat_saved_kwh = 0.0
 
         self.last_daily_reset = now
 
@@ -548,23 +567,38 @@ class ThermalBalanceCoordinator:
             direction = "equilibrium"
             direction_text = "Равновесие"
 
-        # Step 5: Energy Integrators (kWh)
+        # Step 5: Energy & Cost Integrators (kWh & Currency)
         if self.last_update_time is not None:
             delta_sec = (now - self.last_update_time).total_seconds()
             if delta_sec > 0:
                 delta_hours = delta_sec / 3600.0
                 e_heat_new = (p_gain * delta_hours) / 1000.0
                 e_cool_new = (p_cooling * delta_hours) / 1000.0
+                e_ac_elec_new = (self.ac_power_val * delta_hours) / 1000.0
+                
+                p_solar_saved = (self.window_area * self.solar_val * 0.50) if self.curtains_closed else 0.0
+                e_shading_saved_new = (p_solar_saved * delta_hours) / 1000.0
 
                 self.total_heat_absorbed += e_heat_new
                 self.ac_thermal_energy_total += e_cool_new
                 self.daily_heat_absorbed += e_heat_new
                 self.daily_ac_thermal_energy += e_cool_new
+                self.daily_ac_elec_kwh += e_ac_elec_new
+                self.daily_shading_heat_saved_kwh += e_shading_saved_new
 
         self.last_update_time = now
 
         daily_balance = self.daily_heat_absorbed - self.daily_ac_thermal_energy
         net_balance = self.total_heat_absorbed - self.ac_thermal_energy_total
+
+        # Financial cost calculations
+        ac_energy_cost = self.daily_ac_elec_kwh * self.electricity_rate
+        shading_saved_elec_kwh = self.daily_shading_heat_saved_kwh / max(1.0, cop_real if cop_real > 0 else 3.2)
+        shading_daily_savings = shading_saved_elec_kwh * self.electricity_rate
+
+        # Smart advice & recommendations
+        rec_open_window = bool((self.t_out_val < self.t_in_val - 1.0) and (self.t_in_val >= 22.0) and not self.window_is_open)
+        rec_close_curtains = bool(is_daylight and (self.solar_val >= 200.0) and not self.curtains_closed)
 
         # Store calculated metrics
         self.data = {
@@ -579,6 +613,10 @@ class ThermalBalanceCoordinator:
             SENSOR_AC_THERMAL_ENERGY_TOTAL: round(self.ac_thermal_energy_total, 3),
             SENSOR_AC_CONDENSATION_RATE: round(condensation_rate_lh, 2),
             SENSOR_EMPIRICAL_K_FACTOR: round(self.empirical_k_val, 2),
+            SENSOR_AC_ENERGY_COST: round(ac_energy_cost, 2),
+            SENSOR_SHADING_DAILY_SAVINGS: round(shading_daily_savings, 2),
+            BINARY_SENSOR_RECOMMEND_OPEN_WINDOW: rec_open_window,
+            BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS: rec_close_curtains,
         }
 
         # Extra attributes

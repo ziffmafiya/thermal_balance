@@ -11,6 +11,8 @@ from .const import (
     CONF_AC_AIRFLOW,
     CONF_AC_MAX_COOLING,
     CONF_CEILING_HEIGHT,
+    CONF_CURRENCY_SYMBOL,
+    CONF_ELECTRICITY_RATE,
     CONF_EXTERNAL_WALLS_FRACTION,
     CONF_ILLUMINANCE_THRESHOLD,
     CONF_ROOM_AREA,
@@ -30,6 +32,8 @@ from .const import (
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
+    DEFAULT_CURRENCY_SYMBOL,
+    DEFAULT_ELECTRICITY_RATE,
     DEFAULT_EXTERNAL_WALLS_FRACTION,
     DEFAULT_ILLUMINANCE_THRESHOLD,
     DEFAULT_ROOM_AREA,
@@ -166,6 +170,16 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
             min=1.0, max=5000.0, step=5.0, unit_of_measurement="lx", mode=selector.NumberSelectorMode.BOX
         )
     )
+
+    vol_rate = _safe_float(defaults.get(CONF_ELECTRICITY_RATE), DEFAULT_ELECTRICITY_RATE)
+    schema_dict[vol.Optional(CONF_ELECTRICITY_RATE, default=vol_rate)] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=100.0, step=0.01, mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    curr_sym = str(defaults.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL))
+    schema_dict[vol.Optional(CONF_CURRENCY_SYMBOL, default=curr_sym)] = selector.TextSelector()
 
     win_val = defaults.get(CONF_SENSOR_WINDOW)
     if win_val and isinstance(win_val, str) and win_val.strip():

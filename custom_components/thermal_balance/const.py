@@ -25,6 +25,9 @@ CONF_SENSOR_T_AC_EXIT: Final = "sensor_t_ac_exit"
 CONF_SENSOR_ILLUMINANCE: Final = "sensor_illuminance"
 CONF_ILLUMINANCE_THRESHOLD: Final = "illuminance_threshold"
 
+CONF_ELECTRICITY_RATE: Final = "electricity_rate"
+CONF_CURRENCY_SYMBOL: Final = "currency_symbol"
+
 # Defaults
 DEFAULT_U_WALL: Final = 0.3
 DEFAULT_U_WINDOW: Final = 1.1
@@ -36,6 +39,8 @@ DEFAULT_AC_MAX_COOLING: Final = 3350.0
 DEFAULT_AC_AIRFLOW: Final = 370.0  # m³/h (from Cooper&Hunter spec 210/320/370/480)
 DEFAULT_USE_EMPIRICAL_HLC: Final = False
 DEFAULT_ILLUMINANCE_THRESHOLD: Final = 150.0
+DEFAULT_ELECTRICITY_RATE: Final = 4.32
+DEFAULT_CURRENCY_SYMBOL: Final = "₴"
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"
@@ -50,3 +55,9 @@ SENSOR_AC_THERMAL_ENERGY_TOTAL: Final = "ac_thermal_energy_total"
 SENSOR_AC_CONDENSATION_RATE: Final = "ac_condensation_rate"
 SENSOR_EMPIRICAL_K_FACTOR: Final = "empirical_k_factor"
 
+SENSOR_AC_ENERGY_COST: Final = "ac_energy_cost"
+SENSOR_SHADING_DAILY_SAVINGS: Final = "shading_daily_savings"
+
+# Binary sensor keys
+BINARY_SENSOR_RECOMMEND_OPEN_WINDOW: Final = "recommend_open_window"
+BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS: Final = "recommend_close_curtains"

@@ -22,6 +22,8 @@
           "sensor_solar": "Solar Radiation",
           "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
           "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
+          "electricity_rate": "Electricity Rate per kWh",
+          "currency_symbol": "Currency Symbol",
           "sensor_ac_power": "AC Power Consumption",
           "sensor_window": "Window State"
         },

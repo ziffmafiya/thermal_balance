@@ -20,6 +20,7 @@ from .const import (
     DOMAIN,
     SENSOR_AC_CARNOT_COP,
     SENSOR_AC_CONDENSATION_RATE,
+    SENSOR_AC_ENERGY_COST,
     SENSOR_AC_HEAT_OUTPUT,
     SENSOR_AC_THERMAL_ENERGY_TOTAL,
     SENSOR_DAILY_THERMAL_BALANCE,
@@ -27,6 +28,7 @@ from .const import (
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_INSTANT_NET_BALANCE,
     SENSOR_NET_THERMAL_BALANCE,
+    SENSOR_SHADING_DAILY_SAVINGS,
     SENSOR_TIME_TO_1DEG,
     SENSOR_TOTAL_HEAT_ABSORBED,
 )
@@ -125,6 +127,22 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         is_restorable=True,
     ),
+    ThermalBalanceSensorEntityDescription(
+        key=SENSOR_AC_ENERGY_COST,
+        name="AC Energy Cost",
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        is_restorable=True,
+    ),
+    ThermalBalanceSensorEntityDescription(
+        key=SENSOR_SHADING_DAILY_SAVINGS,
+        name="Shading Daily Savings",
+        native_unit_of_measurement=None,
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        is_restorable=True,
+    ),
 )
 
 
@@ -163,6 +181,14 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
             manufacturer="Custom Integration",
             model="Thermal Thermodynamics Hub",
         )
+
+    @property
+    def native_unit_of_measurement(self) -> Optional[str]:
+        """Return dynamic unit of measurement for monetary sensors."""
+        key = self.entity_description.key
+        if key in (SENSOR_AC_ENERGY_COST, SENSOR_SHADING_DAILY_SAVINGS):
+            return self.coordinator.currency_symbol
+        return self.entity_description.native_unit_of_measurement
 
     @property
     def native_value(self) -> Optional[float]:

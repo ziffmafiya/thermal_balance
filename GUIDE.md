@@ -154,6 +154,10 @@ $$0.5 \cdot HLC_{\text{theoretical}} \le K_{\text{empirical}} \le 2.0 \cdot HLC_
 | `sensor.thermal_balance_daily_thermal_balance` | Daily Balance | `kWh` | Суточный чистый энергобаланс. |
 | `sensor.thermal_balance_net_thermal_balance` | Total Balance | `kWh` | Накопительный баланс за все время. |
 | `sensor.thermal_balance_empirical_k_factor` | Empirical K-Factor | `W/K` | Реально измеренный $K$-коэффициент.<br>Атрибуты: `theoretical_hlc_w_k`, `active_hlc_w_k`, `deviation_percent`, `insulation_grade`, `auto_calibrated`, `samples_count`. |
+| `sensor.thermal_balance_ac_energy_cost` | AC Energy Cost | `₴` / `UAH` | Затраты на электроэнергию кондиционера за день.<br>Расчет: $E_{\text{elec}} \cdot \text{tariff}$. |
+| `sensor.thermal_balance_shading_daily_savings` | Shading Daily Savings | `₴` / `UAH` | Финансовая экономия от зашторивания в день.<br>Расчет: $(E_{\text{solar\_saved}} / \text{COP}) \cdot \text{tariff}$. |
+| `binary_sensor.thermal_balance_recommend_open_window` | Open Window Recommended | — | `on` если $T_{\text{out}} < T_{\text{in}} - 1^\circ\text{C}$ и окно закрыто.<br>Атрибуты: `advice`, `temp_difference_c`. |
+| `binary_sensor.thermal_balance_recommend_close_curtains` | Close Curtains Recommended | — | `on` если солнце $\ge 200\text{ Вт/м}^2$ и шторы открыты.<br>Атрибуты: `advice`, `solar_radiation_w_m2`, `potential_heat_reduction_w`, `potential_daily_savings`. |
 
 ---
 
