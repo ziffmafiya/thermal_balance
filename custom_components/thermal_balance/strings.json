@@ -20,6 +20,8 @@
           "sensor_rh_in": "Indoor Humidity",
           "sensor_rh_out": "Outdoor Humidity",
           "sensor_solar": "Solar Radiation",
+          "sensor_illuminance": "Indoor Illuminance Sensor",
+          "illuminance_threshold": "Curtain Shading Lux Threshold",
           "sensor_ac_power": "AC Power Consumption",
           "sensor_window": "Window State"
         },
@@ -39,6 +41,8 @@
           "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
           "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
           "sensor_solar": "Sensor providing solar irradiance in W/m²",
+          "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
+          "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
           "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
           "sensor_window": "Binary sensor indicating window open/closed state (optional)"
         }
@@ -69,6 +73,8 @@
           "sensor_rh_in": "Indoor Humidity",
           "sensor_rh_out": "Outdoor Humidity",
           "sensor_solar": "Solar Radiation",
+          "sensor_illuminance": "Indoor Illuminance Sensor",
+          "illuminance_threshold": "Curtain Shading Lux Threshold",
           "sensor_ac_power": "AC Power Consumption",
           "sensor_window": "Window State"
         },
@@ -88,6 +94,8 @@
           "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
           "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
           "sensor_solar": "Sensor providing solar irradiance in W/m²",
+          "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
+          "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
           "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
           "sensor_window": "Binary sensor indicating window open/closed state (optional)"
         }

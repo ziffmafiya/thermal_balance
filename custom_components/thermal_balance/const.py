@@ -22,6 +22,8 @@ CONF_SENSOR_WINDOW: Final = "sensor_window"
 CONF_SENSOR_RH_IN: Final = "sensor_rh_in"
 CONF_SENSOR_RH_OUT: Final = "sensor_rh_out"
 CONF_SENSOR_T_AC_EXIT: Final = "sensor_t_ac_exit"
+CONF_SENSOR_ILLUMINANCE: Final = "sensor_illuminance"
+CONF_ILLUMINANCE_THRESHOLD: Final = "illuminance_threshold"
 
 # Defaults
 DEFAULT_U_WALL: Final = 0.3
@@ -33,6 +35,7 @@ DEFAULT_EXTERNAL_WALLS_FRACTION: Final = 0.25
 DEFAULT_AC_MAX_COOLING: Final = 3350.0
 DEFAULT_AC_AIRFLOW: Final = 370.0  # m³/h (from Cooper&Hunter spec 210/320/370/480)
 DEFAULT_USE_EMPIRICAL_HLC: Final = False
+DEFAULT_ILLUMINANCE_THRESHOLD: Final = 150.0
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"

@@ -679,6 +679,11 @@ class ThermalBalanceCard extends HTMLElement {
       const empiricalKGrade = this._getAttr('empirical_k_factor', 'insulation_grade');
       const empiricalKAuto = this._getAttr('empirical_k_factor', 'auto_calibrated');
 
+      // Curtains & Shading attributes
+      const curtainsClosed = this._getAttr('heat_gain', 'curtains_closed');
+      const curtainsState = this._getAttr('heat_gain', 'curtains_state');
+      const illuminanceLux = this._getAttr('heat_gain', 'illuminance_lux');
+
       // time_to_1c attributes
       const direction = this._getAttr('time_to_1c', 'direction') || 'equilibrium';
       const dirInfo = this._dirIcon(direction);
@@ -790,6 +795,13 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="ac-label">Проветривание (Vent)</span>
                       <span class="ac-val" style="color:${ventColor}">${ventValText}</span>
                     </div>
+                    ${curtainsState !== null && curtainsState !== undefined ? `
+                    <div class="ac-row">
+                      <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
+                      <span class="ac-label">Шторы (Curtains)</span>
+                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Зашторены (-70%)' : 'Открыты'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
+                    </div>
+                    ` : ''}
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#FACC15"></span>
                       <span class="ac-label">Солнце (Solar)</span>

@@ -14,8 +14,10 @@ from .const import (
     CONF_AC_MAX_COOLING,
     CONF_CEILING_HEIGHT,
     CONF_EXTERNAL_WALLS_FRACTION,
+    CONF_ILLUMINANCE_THRESHOLD,
     CONF_ROOM_AREA,
     CONF_SENSOR_AC_POWER,
+    CONF_SENSOR_ILLUMINANCE,
     CONF_SENSOR_RH_IN,
     CONF_SENSOR_RH_OUT,
     CONF_SENSOR_SOLAR,
@@ -31,6 +33,7 @@ from .const import (
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
     DEFAULT_EXTERNAL_WALLS_FRACTION,
+    DEFAULT_ILLUMINANCE_THRESHOLD,
     DEFAULT_ROOM_AREA,
     DEFAULT_U_WALL,
     DEFAULT_U_WINDOW,
@@ -115,6 +118,9 @@ class ThermalBalanceCoordinator:
         self.sensor_solar: str = options.get(CONF_SENSOR_SOLAR, data.get(CONF_SENSOR_SOLAR, ""))
         self.sensor_ac_power: str = options.get(CONF_SENSOR_AC_POWER, data.get(CONF_SENSOR_AC_POWER, ""))
         self.sensor_window: str = options.get(CONF_SENSOR_WINDOW, data.get(CONF_SENSOR_WINDOW, ""))
+        self.sensor_illuminance: str = options.get(CONF_SENSOR_ILLUMINANCE, data.get(CONF_SENSOR_ILLUMINANCE, ""))
+        self.illuminance_threshold: float = _safe_float(options.get(CONF_ILLUMINANCE_THRESHOLD, data.get(CONF_ILLUMINANCE_THRESHOLD)), DEFAULT_ILLUMINANCE_THRESHOLD)
+        self.has_illuminance_sensor: bool = bool(self.sensor_illuminance and isinstance(self.sensor_illuminance, str) and self.sensor_illuminance.strip())
 
         # Pre-calculated static thermal capacity values (Step 1)
         self.volume: float = self.room_area * self.ceiling_height
@@ -146,6 +152,8 @@ class ThermalBalanceCoordinator:
         self.solar_val: float = 0.0
         self.ac_power_val: float = 0.0
         self.window_is_open: bool = False
+        self.illuminance_val: float = 500.0
+        self.curtains_closed: bool = False
 
         # Energy accumulators (kWh)
         self.total_heat_absorbed: float = 0.0
@@ -251,6 +259,7 @@ class ThermalBalanceCoordinator:
                 self.sensor_solar,
                 self.sensor_ac_power,
                 self.sensor_window,
+                self.sensor_illuminance,
             ] if entity
         ]
 
@@ -299,6 +308,10 @@ class ThermalBalanceCoordinator:
         else:
             self.window_is_open = (self.ac_power_val < 20.0)
 
+        if self.has_illuminance_sensor:
+            self.illuminance_val = self._get_float_state(self.sensor_illuminance, 500.0)
+            self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
+
     def _get_float_state(self, entity_id: str, default: float) -> float:
         """Extract float value safely from Home Assistant state machine."""
         if not entity_id:
@@ -346,6 +359,9 @@ class ThermalBalanceCoordinator:
             self.ac_power_val = self._safe_float_val(new_state.state, self.ac_power_val)
         elif entity_id == self.sensor_window:
             self.window_is_open = new_state.state.lower() in ("on", "true", "1")
+        elif entity_id == self.sensor_illuminance:
+            self.illuminance_val = self._safe_float_val(new_state.state, self.illuminance_val)
+            self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
 
         self.recalculate()
 
@@ -450,7 +466,13 @@ class ThermalBalanceCoordinator:
 
         # Step 2: Empirical K-Factor Estimation & Active Heat Loss Coefficient HLC
         delta_t_env = abs(self.t_out_val - self.t_in_val)
-        p_solar = self.window_area * self.solar_val * 0.70
+        if self.has_illuminance_sensor:
+            self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
+        else:
+            self.curtains_closed = False
+
+        g_solar_factor = 0.20 if self.curtains_closed else 0.70
+        p_solar = self.window_area * self.solar_val * g_solar_factor
 
         if not self.window_is_open and delta_t_env >= 1.5:
             if self.ac_power_val >= 20.0 and p_cooling_sensible > 0:
@@ -548,6 +570,10 @@ class ThermalBalanceCoordinator:
                 "hlc_w_k": round(hlc, 2),
                 "window_is_open": self.window_is_open,
                 "window_mode": "sensor" if self.has_window_sensor else ("auto (ac off = open)" if self.window_is_open else "auto (ac on = closed)"),
+                "curtains_closed": self.curtains_closed,
+                "curtains_state": "Зашторены (Closed)" if self.curtains_closed else "Открыты (Open)",
+                "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
+                "g_solar_factor": g_solar_factor,
             },
             SENSOR_INSTANT_NET_BALANCE: {
                 "p_env_w": round(p_env, 1),

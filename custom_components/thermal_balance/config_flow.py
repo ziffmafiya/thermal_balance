@@ -12,8 +12,10 @@ from .const import (
     CONF_AC_MAX_COOLING,
     CONF_CEILING_HEIGHT,
     CONF_EXTERNAL_WALLS_FRACTION,
+    CONF_ILLUMINANCE_THRESHOLD,
     CONF_ROOM_AREA,
     CONF_SENSOR_AC_POWER,
+    CONF_SENSOR_ILLUMINANCE,
     CONF_SENSOR_RH_IN,
     CONF_SENSOR_RH_OUT,
     CONF_SENSOR_SOLAR,
@@ -29,6 +31,7 @@ from .const import (
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
     DEFAULT_EXTERNAL_WALLS_FRACTION,
+    DEFAULT_ILLUMINANCE_THRESHOLD,
     DEFAULT_ROOM_AREA,
     DEFAULT_U_WALL,
     DEFAULT_U_WINDOW,
@@ -145,8 +148,8 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
                 selector.EntitySelectorConfig(domain=["sensor", "input_number", "number"])
             )
 
-    # Optional Sensors (Humidity, Measured AC Exit Temperature / Delta T, Window)
-    for conf_key in (CONF_SENSOR_RH_IN, CONF_SENSOR_RH_OUT, CONF_SENSOR_T_AC_EXIT):
+    # Optional Sensors (Humidity, Measured AC Exit Temperature / Delta T, Window, Illuminance)
+    for conf_key in (CONF_SENSOR_RH_IN, CONF_SENSOR_RH_OUT, CONF_SENSOR_T_AC_EXIT, CONF_SENSOR_ILLUMINANCE):
         val = defaults.get(conf_key)
         if val and isinstance(val, str) and val.strip():
             schema_dict[vol.Optional(conf_key, default=val)] = selector.EntitySelector(
@@ -156,6 +159,13 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
             schema_dict[vol.Optional(conf_key)] = selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=["sensor", "input_number", "number"])
             )
+
+    vol_thresh = _safe_float(defaults.get(CONF_ILLUMINANCE_THRESHOLD), DEFAULT_ILLUMINANCE_THRESHOLD)
+    schema_dict[vol.Optional(CONF_ILLUMINANCE_THRESHOLD, default=vol_thresh)] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1.0, max=5000.0, step=5.0, unit_of_measurement="lx", mode=selector.NumberSelectorMode.BOX
+        )
+    )
 
     win_val = defaults.get(CONF_SENSOR_WINDOW)
     if win_val and isinstance(win_val, str) and win_val.strip():
