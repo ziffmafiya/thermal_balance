@@ -35,7 +35,7 @@ $$\Delta P_{\text{net}} = P_{\text{env}} - P_{\text{cooling}} = (P_{\text{wall}}
 
 ### 🌌 2. Двойная Астрономическая Проверка Дневного Времени
 Чтобы люстры и светильники в комнате ночью не путали систему, статус `is_daylight` проверяется двойным способом:
-$$\text{is\_daylight} = (I_{\text{solar}} > 10\text{ Вт/м}^2) \quad \text{ИЛИ} \quad (\text{sun.sun == 'above\_horizon'} \quad \text{или} \quad \text{elevation} > 0^\circ)$$
+$$\text{is-daylight} = (I_{\text{solar}} > 10\text{ Вт/м}^2) \quad \text{ИЛИ} \quad (\text{sun.sun == 'above-horizon'} \quad \text{или} \quad \text{elevation} > 0^\circ)$$
 
 ### ❄️ 3. Холодопроизводительность кондиционера ($P_{\text{cooling}}$) и Психрометрия
 * **Carnot COP & Съем тепла**:
@@ -49,11 +49,11 @@ $$\text{is\_daylight} = (I_{\text{solar}} > 10\text{ Вт/м}^2) \quad \text{И�
 ### ⏱️ 4. Прогноз изменения температуры (Time to 1°C)
 Учитывает **термическую инерцию** воздуха и строительных конструкций/мебели:
 $$C_{\text{total}} = (0.336 \cdot V_{\text{room}}) + (A_{\text{floor}} \cdot 40.0)\text{ Вт·ч/К}$$
-$$\text{Time to 1°C} = \frac{C_{\text{total}}}{|P_{\text{net\_sensible}}|} \cdot 60 \quad [\text{минут}]$$
+$$\text{Time to 1°C} = \frac{C_{\text{total}}}{|P_{\text{net-sensible}}|} \cdot 60 \quad [\text{минут}]$$
 
 ### 🧮 5. Эмпирический $K$-коэффициент ($HLC_{\text{empirical}}$) и Защита от Ошибок
 При установившейся работе кондиционера замеряется отношение съема тепла к дельте температур:
-$$K_{\text{instant}} = \frac{P_{\text{cooling\_sensible}} - P_{\text{solar}}}{|T_{\text{in}} - T_{\text{out}}|}$$
+$$K_{\text{instant}} = \frac{P_{\text{cooling-sensible}} - P_{\text{solar}}}{|T_{\text{in}} - T_{\text{out}}|}$$
 Для предотвращения искажений при охлаждении массы помещения и пуске компрессора $K_{\text{empirical}}$ строго ограничен физическим коридором:
 $$0.5 \cdot HLC_{\text{theoretical}} \le K_{\text{empirical}} \le 2.0 \cdot HLC_{\text{theoretical}}$$
 
