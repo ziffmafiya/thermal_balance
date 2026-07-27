@@ -486,6 +486,15 @@ class ThermalBalanceCoordinator:
         daily_balance = self.daily_heat_absorbed - self.daily_ac_thermal_energy
         net_balance = self.total_heat_absorbed - self.ac_thermal_energy_total
 
+        # Empirical HLC auto-estimation (W/°C) based on daily thermal energy & delta T
+        delta_t_abs = abs(self.t_out_val - self.t_in_val)
+        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_hours = max(0.1, (now - midnight).total_seconds() / 3600.0)
+        if delta_t_abs >= 0.5 and self.daily_ac_thermal_energy > 0:
+            empirical_hlc = (self.daily_ac_thermal_energy * 1000.0) / (delta_t_abs * daily_hours)
+        else:
+            empirical_hlc = hlc
+
         # Store calculated metrics
         self.data = {
             SENSOR_INSTANT_HEAT_GAIN: round(p_gain, 2),
@@ -539,6 +548,8 @@ class ThermalBalanceCoordinator:
             SENSOR_DAILY_THERMAL_BALANCE: {
                 "daily_heat_absorbed": round(self.daily_heat_absorbed, 3),
                 "daily_ac_thermal_energy": round(self.daily_ac_thermal_energy, 3),
+                "theoretical_hlc_w_c": round(hlc, 2),
+                "measured_hlc_w_c": round(empirical_hlc, 2),
             },
             SENSOR_NET_THERMAL_BALANCE: {
                 "total_heat_absorbed": round(self.total_heat_absorbed, 3),
