@@ -386,12 +386,13 @@ class ThermalBalanceCard extends HTMLElement {
 
     const heatEid = this._resolveEntity('heat_gain');
     const coolEid = this._resolveEntity('ac_cooling');
-    if (!heatEid && !coolEid) {
+    const netEid = this._resolveEntity('net_balance');
+    if (!heatEid && !coolEid && !netEid) {
       this._fetchingHistory = false;
       return;
     }
 
-    const entityIds = [heatEid, coolEid].filter(Boolean);
+    const entityIds = [heatEid, coolEid, netEid].filter(Boolean);
     const startTime = new Date(now - 24 * 3600 * 1000).toISOString();
 
     this._hass.callWS({
@@ -409,13 +410,13 @@ class ThermalBalanceCard extends HTMLElement {
     });
   }
 
-  _sampleHistory(key, liveVal, numPoints = 25) {
+  _sampleHistory(key, liveVal, numPoints = 288) {
     const eid = this._resolveEntity(key);
     const result = new Array(numPoints).fill(0);
 
     if (!eid || !this._historyData || !this._historyData[eid]) {
       if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = Math.max(0, liveVal);
+        result[numPoints - 1] = liveVal;
       }
       return result;
     }
@@ -423,7 +424,7 @@ class ThermalBalanceCard extends HTMLElement {
     const items = this._historyData[eid];
     if (!Array.isArray(items) || items.length === 0) {
       if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = Math.max(0, liveVal);
+        result[numPoints - 1] = liveVal;
       }
       return result;
     }
@@ -450,11 +451,11 @@ class ThermalBalanceCard extends HTMLElement {
           break;
         }
       }
-      result[i] = Math.max(0, currentVal);
+      result[i] = currentVal;
     }
 
     if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-      result[numPoints - 1] = Math.max(0, liveVal);
+      result[numPoints - 1] = liveVal;
     }
 
     return result;
@@ -559,6 +560,7 @@ class ThermalBalanceCard extends HTMLElement {
       const numPoints = 288;
       const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
       const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
+      const netPoints = this._getTrendPoints('net_balance', this._getState('net_balance'), numPoints);
 
       const nowMs = Date.now();
       const startMs = nowMs - 86400000;
@@ -573,6 +575,15 @@ class ThermalBalanceCard extends HTMLElement {
 
       const option = {
         backgroundColor: 'transparent',
+        legend: {
+          show: true,
+          top: 0,
+          right: 10,
+          textStyle: { color: '#9CA3AF', fontSize: 10 },
+          itemWidth: 10,
+          itemHeight: 6,
+          data: ['Heat', 'Cooling', 'Net']
+        },
         tooltip: {
           trigger: 'axis',
           backgroundColor: '#121A2B',
@@ -583,16 +594,17 @@ class ThermalBalanceCard extends HTMLElement {
           formatter: (params) => {
             let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${params[0].name}</div>`;
             params.forEach(p => {
+              const sign = p.value > 0 ? '+' : '';
               res += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
                         <span style="width:8px;height:8px;border-radius:50%;background:${p.color}"></span>
-                        <span>${p.seriesName}: <b style="color:#FFF">${Math.round(p.value)} W</b></span>
+                        <span>${p.seriesName}: <b style="color:#FFF">${sign}${Math.round(p.value)} W</b></span>
                       </div>`;
             });
             return res;
           }
         },
         grid: {
-          top: 15,
+          top: 25,
           right: 10,
           bottom: 22,
           left: 45,
@@ -613,7 +625,7 @@ class ThermalBalanceCard extends HTMLElement {
         },
         series: [
           {
-            name: 'Heat Gain',
+            name: 'Heat',
             type: 'line',
             smooth: 0.3,
             smoothMonotone: 'x',
@@ -622,17 +634,17 @@ class ThermalBalanceCard extends HTMLElement {
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color: '#FF7A3C' },
-            lineStyle: { width: 2.2, color: '#FF7A3C' },
+            lineStyle: { width: 2.0, color: '#FF7A3C' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(255, 122, 60, 0.35)' },
+                { offset: 0, color: 'rgba(255, 122, 60, 0.25)' },
                 { offset: 1, color: 'rgba(255, 122, 60, 0.0)' }
               ])
             },
             data: heatPoints.map(v => Math.round(v))
           },
           {
-            name: 'AC Cooling',
+            name: 'Cooling',
             type: 'line',
             smooth: 0.3,
             smoothMonotone: 'x',
@@ -641,14 +653,33 @@ class ThermalBalanceCard extends HTMLElement {
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color: '#4DA3FF' },
-            lineStyle: { width: 2.2, color: '#4DA3FF' },
+            lineStyle: { width: 2.0, color: '#4DA3FF' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(77, 163, 255, 0.35)' },
+                { offset: 0, color: 'rgba(77, 163, 255, 0.25)' },
                 { offset: 1, color: 'rgba(77, 163, 255, 0.0)' }
               ])
             },
             data: coolPoints.map(v => Math.round(v))
+          },
+          {
+            name: 'Net',
+            type: 'line',
+            smooth: 0.3,
+            smoothMonotone: 'x',
+            sampling: 'lttb',
+            showSymbol: false,
+            symbol: 'circle',
+            symbolSize: 6,
+            itemStyle: { color: '#00C896' },
+            lineStyle: { width: 2.2, color: '#00C896', type: 'dashed' },
+            areaStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: 'rgba(0, 200, 150, 0.15)' },
+                { offset: 1, color: 'rgba(0, 200, 150, 0.0)' }
+              ])
+            },
+            data: netPoints.map(v => Math.round(v))
           }
         ]
       };
