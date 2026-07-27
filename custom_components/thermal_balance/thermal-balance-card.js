@@ -1077,17 +1077,20 @@ class ThermalBalanceCard extends HTMLElement {
         display: grid;
         grid-template-columns: 1fr;
         gap: 18px;
+        align-items: stretch;
       }
-      @container tb-card (min-width: 680px) {
+      @container tb-card (min-width: 580px) {
         .card-layout {
-          grid-template-columns: 1fr 1fr;
-          align-items: start;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          align-items: stretch;
         }
       }
       .card-col {
         display: flex;
         flex-direction: column;
         gap: 18px;
+        min-width: 0;
+        height: 100%;
       }
       .header {
         display: flex;
