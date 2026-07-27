@@ -11,7 +11,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS,
@@ -58,7 +57,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], BinarySensorEntity):
+class ThermalBalanceBinarySensor(BinarySensorEntity):
     """Representation of a Thermal Balance binary sensor."""
 
     entity_description: ThermalBalanceBinarySensorDescription
@@ -70,7 +69,8 @@ class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], B
         entry: ConfigEntry,
     ) -> None:
         """Initialize the binary sensor."""
-        super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.entry = entry
         self.entity_description = description
         self._attr_unique_id = f"{entry.entry_id}_{description.key}"
         self._attr_has_entity_name = True
@@ -82,14 +82,15 @@ class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], B
         )
 
     @property
+    def available(self) -> bool:
+        """Return True if entity is available."""
+        return True
+
+    @property
     def is_on(self) -> bool:
         """Return true if the binary sensor is on."""
         key = self.entity_description.key
-        if key == BINARY_SENSOR_RECOMMEND_OPEN_WINDOW:
-            return bool(self.coordinator.data.get("recommend_open_window", False))
-        if key == BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS:
-            return bool(self.coordinator.data.get("recommend_close_curtains", False))
-        return False
+        return bool(self.coordinator.data.get(key, False))
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
@@ -127,3 +128,10 @@ class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], B
             attrs["potential_daily_savings"] = f"{saved_cost_day:.2f} {symbol}/day"
 
         return attrs
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity addition to Home Assistant."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self.async_write_ha_state)
+        )
