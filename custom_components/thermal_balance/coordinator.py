@@ -466,7 +466,9 @@ class ThermalBalanceCoordinator:
 
         # Step 2: Empirical K-Factor Estimation & Active Heat Loss Coefficient HLC
         delta_t_env = abs(self.t_out_val - self.t_in_val)
-        if self.has_illuminance_sensor:
+        is_daylight = (self.solar_val > 10.0)
+
+        if self.has_illuminance_sensor and is_daylight:
             self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
         else:
             self.curtains_closed = False
