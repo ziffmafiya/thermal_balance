@@ -543,7 +543,7 @@ class ThermalBalanceCard extends HTMLElement {
       }
       this._chart = echarts.init(container, null, { renderer: 'canvas' });
 
-      const numPoints = 25;
+      const numPoints = 288;
       const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
       const coolPoints = this._getTrendPoints('ac_cooling', this._getState('ac_cooling'), numPoints);
 
@@ -589,7 +589,7 @@ class ThermalBalanceCard extends HTMLElement {
           boundaryGap: false,
           data: timeLabels,
           axisLine: { lineStyle: { color: '#233045' } },
-          axisLabel: { color: '#6B7280', fontSize: 10 },
+          axisLabel: { color: '#6B7280', fontSize: 10, interval: 35 },
           splitLine: { show: false }
         },
         yAxis: {
@@ -602,7 +602,7 @@ class ThermalBalanceCard extends HTMLElement {
           {
             name: 'Heat Gain',
             type: 'line',
-            smooth: true,
+            smooth: 0.35,
             showSymbol: false,
             symbol: 'circle',
             symbolSize: 6,
@@ -619,7 +619,7 @@ class ThermalBalanceCard extends HTMLElement {
           {
             name: 'AC Cooling',
             type: 'line',
-            smooth: true,
+            smooth: 0.35,
             showSymbol: false,
             symbol: 'circle',
             symbolSize: 6,
