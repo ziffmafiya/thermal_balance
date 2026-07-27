@@ -1076,18 +1076,28 @@ class ThermalBalanceCard extends HTMLElement {
       .section-title svg { flex-shrink: 0; }
       .ac-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr;
         gap: 0;
+      }
+      @container tb-card (min-width: 500px) {
+        .ac-grid {
+          grid-template-columns: 1fr 1fr;
+        }
       }
       .ac-row {
         display: flex;
         align-items: center;
-        gap: 6px;
+        justify-content: space-between;
+        gap: 8px;
         padding: 7px 6px;
         border-bottom: 1px solid #233045;
         font-size: 12px;
+        min-width: 0;
       }
-      .ac-row:nth-last-child(-n+2) { border-bottom: none; }
+      .ac-row:last-child { border-bottom: none; }
+      @container tb-card (min-width: 500px) {
+        .ac-row:nth-last-child(-n+2) { border-bottom: none; }
+      }
       .ac-dot {
         width: 5px; height: 5px;
         border-radius: 50%;
@@ -1096,12 +1106,17 @@ class ThermalBalanceCard extends HTMLElement {
       .ac-label {
         color: var(--tb-secondary);
         flex: 1;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
       }
       .ac-val {
         font-weight: 600;
         color: var(--tb-primary);
         white-space: nowrap;
+        flex-shrink: 0;
+        text-align: right;
       }
       .ac-unit {
         font-weight: 400;

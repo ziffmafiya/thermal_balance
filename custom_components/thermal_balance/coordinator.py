@@ -469,13 +469,13 @@ class ThermalBalanceCoordinator:
 
         dev_pct = ((self.empirical_k_val - self.hlc_theoretical) / max(0.1, self.hlc_theoretical)) * 100.0
         if dev_pct <= 15.0:
-            insulation_grade = "Отличная (соответствует паспорту)"
+            insulation_grade = "Отличная (паспорт)"
         elif dev_pct <= 35.0:
-            insulation_grade = "Хорошая (умеренные утечки)"
+            insulation_grade = "Хорошая (умеренная)"
         elif dev_pct <= 65.0:
-            insulation_grade = "Удовлетворительная (есть мостики холода)"
+            insulation_grade = "Средняя (мостики)"
         else:
-            insulation_grade = "Низкая (высокие утечки / сквозняки)"
+            insulation_grade = "Низкая (сквозняки)"
 
         hlc = self.hlc_closed + (self.hlc_vent if self.window_is_open else 0.0)
 
