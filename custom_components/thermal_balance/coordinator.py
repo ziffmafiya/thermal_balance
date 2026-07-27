@@ -466,7 +466,19 @@ class ThermalBalanceCoordinator:
 
         # Step 2: Empirical K-Factor Estimation & Active Heat Loss Coefficient HLC
         delta_t_env = abs(self.t_out_val - self.t_in_val)
-        is_daylight = (self.solar_val > 10.0)
+        
+        # Bulletproof Daylight Detection (using solar irradiance sensor AND built-in HA sun.sun entity)
+        is_sun_above_horizon = False
+        sun_state = self.hass.states.get("sun.sun")
+        if sun_state is not None:
+            if sun_state.state == "above_horizon":
+                is_sun_above_horizon = True
+            else:
+                elev = self._safe_float_val(sun_state.attributes.get("elevation"), -90.0)
+                if elev > 0.0:
+                    is_sun_above_horizon = True
+
+        is_daylight = (self.solar_val > 10.0) or is_sun_above_horizon
 
         if self.has_illuminance_sensor and is_daylight:
             self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
