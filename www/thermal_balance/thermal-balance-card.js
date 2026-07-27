@@ -436,16 +436,8 @@ class ThermalBalanceCard extends HTMLElement {
 
   _getTrendPoints(key, liveVal, numPoints = 20) {
     const sampled = this._sampleHistory(this._resolveEntity(key), numPoints);
-    if (sampled && sampled.some(v => v > 0)) return sampled;
-
-    const base = liveVal || 0;
-    const pts = [];
-    for (let i = 0; i < numPoints; i++) {
-      const wave = Math.sin((i / numPoints) * Math.PI * 2) * (base * 0.25);
-      const noise = (Math.sin(i * 1.7) * 0.1) * base;
-      pts.push(Math.max(0, base + wave + noise));
-    }
-    return pts;
+    if (sampled) return sampled;
+    return new Array(numPoints).fill(0);
   }
 
   _pointsToPath(points, width, height, maxVal) {
