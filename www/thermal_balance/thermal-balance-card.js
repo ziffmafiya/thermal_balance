@@ -916,13 +916,15 @@ class ThermalBalanceCard extends HTMLElement {
       }
       .tb-card {
         padding: 20px;
+        container-type: inline-size;
+        container-name: tb-card;
       }
       .card-layout {
         display: grid;
         grid-template-columns: 1fr;
         gap: 16px;
       }
-      @media (min-width: 768px) {
+      @container tb-card (min-width: 680px) {
         .card-layout {
           grid-template-columns: 1fr 1fr;
           align-items: start;
