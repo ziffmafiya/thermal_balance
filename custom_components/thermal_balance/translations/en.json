@@ -20,8 +20,8 @@
           "sensor_rh_in": "Indoor Humidity",
           "sensor_rh_out": "Outdoor Humidity",
           "sensor_solar": "Solar Radiation",
-          "sensor_illuminance": "Indoor Illuminance Sensor",
-          "illuminance_threshold": "Curtain Shading Lux Threshold",
+          "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
+          "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
           "sensor_ac_power": "AC Power Consumption",
           "sensor_window": "Window State"
         },
@@ -73,8 +73,8 @@
           "sensor_rh_in": "Indoor Humidity",
           "sensor_rh_out": "Outdoor Humidity",
           "sensor_solar": "Solar Radiation",
-          "sensor_illuminance": "Indoor Illuminance Sensor",
-          "illuminance_threshold": "Curtain Shading Lux Threshold",
+          "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
+          "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
           "sensor_ac_power": "AC Power Consumption",
           "sensor_window": "Window State"
         },
