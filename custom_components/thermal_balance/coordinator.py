@@ -654,7 +654,7 @@ class ThermalBalanceCoordinator:
 
         # Store calculated metrics
         self.data = {
-            SENSOR_INSTANT_HEAT_GAIN: round(p_gain, 2),
+            SENSOR_INSTANT_HEAT_GAIN: round(p_env, 2),
             SENSOR_AC_HEAT_OUTPUT: round(p_cooling, 2),
             SENSOR_INSTANT_NET_BALANCE: round(p_net, 2),
             SENSOR_AC_CARNOT_COP: round(cop_real, 2),
