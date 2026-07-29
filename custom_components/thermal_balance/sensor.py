@@ -217,10 +217,15 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
                     elif self.entity_description.key == SENSOR_EMPIRICAL_K_FACTOR:
                         self.coordinator.empirical_k_val = restored_val
                     elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE:
-                        if last_state.attributes and "daily_heat_absorbed" in last_state.attributes:
-                            self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
-                        if last_state.attributes and "daily_ac_thermal_energy" in last_state.attributes:
-                            self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
+                        if last_state.attributes:
+                            if "daily_heat_absorbed" in last_state.attributes:
+                                self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
+                            if "daily_ac_thermal_energy" in last_state.attributes:
+                                self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
+                            if "daily_ac_elec_kwh" in last_state.attributes:
+                                self.coordinator.daily_ac_elec_kwh = float(last_state.attributes["daily_ac_elec_kwh"])
+                            if "daily_shading_heat_saved_kwh" in last_state.attributes:
+                                self.coordinator.daily_shading_heat_saved_kwh = float(last_state.attributes["daily_shading_heat_saved_kwh"])
                     _LOGGER.debug("Restored %s = %f", self.entity_description.key, restored_val)
                 except (ValueError, TypeError):
                     pass

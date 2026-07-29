@@ -718,6 +718,8 @@ class ThermalBalanceCoordinator:
             SENSOR_DAILY_THERMAL_BALANCE: {
                 "daily_heat_absorbed": round(self.daily_heat_absorbed, 3),
                 "daily_ac_thermal_energy": round(self.daily_ac_thermal_energy, 3),
+                "daily_ac_elec_kwh": round(self.daily_ac_elec_kwh, 3),
+                "daily_shading_heat_saved_kwh": round(self.daily_shading_heat_saved_kwh, 3),
             },
             SENSOR_NET_THERMAL_BALANCE: {
                 "total_heat_absorbed": round(self.total_heat_absorbed, 3),
