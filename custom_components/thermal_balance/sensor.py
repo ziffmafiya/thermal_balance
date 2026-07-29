@@ -101,7 +101,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         name="Heat Absorbed",
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_class=SensorDeviceClass.ENERGY,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.TOTAL,
         is_restorable=True,
     ),
     ThermalBalanceSensorEntityDescription(

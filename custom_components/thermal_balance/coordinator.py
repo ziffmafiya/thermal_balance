@@ -624,7 +624,7 @@ class ThermalBalanceCoordinator:
             delta_sec = (now - self.last_update_time).total_seconds()
             if delta_sec > 0:
                 delta_hours = delta_sec / 3600.0
-                e_heat_new = (p_gain * delta_hours) / 1000.0
+                e_heat_new = (p_env * delta_hours) / 1000.0
                 e_cool_new = (p_cooling * delta_hours) / 1000.0
                 e_ac_elec_new = (self.ac_power_val * delta_hours) / 1000.0
                 
