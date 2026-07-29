@@ -338,7 +338,7 @@ class ThermalBalanceCard extends HTMLElement {
   _gauge(value, max, color1, color2, label, iconSvg) {
     const r = 55;
     const circumference = Math.PI * r;
-    const pct = Math.min(1, Math.max(0, (value || 0) / max));
+    const pct = Math.min(1, Math.max(0, Math.abs(value || 0) / max));
     const offset = circumference * (1 - pct);
     const display = value !== null ? this._fmt(value, 0) : '—';
     const gradId = `grad-${label.replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -745,6 +745,9 @@ class ThermalBalanceCard extends HTMLElement {
       const pSolar = this._getAttr('heat_gain', 'p_solar_w');
       const pWall = this._getAttr('heat_gain', 'p_wall_w');
       const windowOpen = this._getAttr('heat_gain', 'window_is_open') ?? this._getAttr('net_balance', 'window_is_open');
+      const windSpeed = this._getAttr('heat_gain', 'wind_speed_ms');
+      const windDir = this._getAttr('heat_gain', 'wind_dir_deg');
+      const windACH = this._getAttr('heat_gain', 'ventilation_ach');
 
       // Empirical K-Factor attributes
       const empiricalK = this._getState('empirical_k_factor') ?? this._getAttr('heat_gain', 'hlc_w_k');
@@ -844,7 +847,9 @@ class ThermalBalanceCard extends HTMLElement {
 
                 <!-- GAUGES -->
                 <div class="gauges-row">
-                  ${this._gauge(heatGain, 3500, '#FF7A3C', '#FFB199', 'Heat Gain', this._icons.sun)}
+                  ${heatGain !== null && heatGain < 0
+                    ? this._gauge(heatGain, 3500, '#4DA3FF', '#93C5FD', 'Heat Loss', this._icons.snowflake)
+                    : this._gauge(heatGain, 3500, '#FF7A3C', '#FFB199', 'Heat Gain', this._icons.sun)}
                   ${this._gauge(acCooling, 3500, '#4DA3FF', '#93C5FD', 'AC Cooling', this._icons.snowflake)}
                 </div>
 
@@ -886,6 +891,20 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="ac-label">Проветривание (Vent)</span>
                       <span class="ac-val" style="color:${ventColor}">${ventValText}</span>
                     </div>
+                    ${windSpeed !== null && windSpeed !== undefined ? `
+                    <div class="ac-row">
+                      <span class="ac-dot" style="background:#60A5FA"></span>
+                      <span class="ac-label">Ветер (Wind)</span>
+                      <span class="ac-val" style="color:#60A5FA">${this._fmt(windSpeed, 1)} m/s <span class="ac-unit">(${this._fmt(windDir, 0)}°)</span></span>
+                    </div>
+                    ` : ''}
+                    ${windACH !== null && windACH !== undefined && windowOpen ? `
+                    <div class="ac-row">
+                      <span class="ac-dot" style="background:#34D399"></span>
+                      <span class="ac-label">Смена воздуха (ACH)</span>
+                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">раз/час</span></span>
+                    </div>
+                    ` : ''}
                     ${curtainsState !== null && curtainsState !== undefined ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>

@@ -28,6 +28,9 @@ from .const import (
     CONF_SENSOR_T_AC_EXIT,
     CONF_SENSOR_T_IN,
     CONF_SENSOR_T_OUT,
+    CONF_SENSOR_WIND_SPEED,
+    CONF_SENSOR_WIND_DIRECTION,
+    CONF_WINDOW_AZIMUTH,
     CONF_SENSOR_WINDOW,
     CONF_U_WALL,
     CONF_U_WINDOW,
@@ -45,6 +48,7 @@ from .const import (
     DEFAULT_U_WINDOW,
     DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
+    DEFAULT_WINDOW_AZIMUTH,
     DOMAIN,
     SENSOR_AC_CARNOT_COP,
     SENSOR_AC_CONDENSATION_RATE,
@@ -127,8 +131,13 @@ class ThermalBalanceCoordinator:
         self.sensor_ac_power: str = options.get(CONF_SENSOR_AC_POWER, data.get(CONF_SENSOR_AC_POWER, ""))
         self.sensor_window: str = options.get(CONF_SENSOR_WINDOW, data.get(CONF_SENSOR_WINDOW, ""))
         self.sensor_illuminance: str = options.get(CONF_SENSOR_ILLUMINANCE, data.get(CONF_SENSOR_ILLUMINANCE, ""))
+        self.sensor_wind_speed: str = options.get(CONF_SENSOR_WIND_SPEED, data.get(CONF_SENSOR_WIND_SPEED, ""))
+        self.sensor_wind_direction: str = options.get(CONF_SENSOR_WIND_DIRECTION, data.get(CONF_SENSOR_WIND_DIRECTION, ""))
+        self.window_azimuth: float = _safe_float(options.get(CONF_WINDOW_AZIMUTH, data.get(CONF_WINDOW_AZIMUTH)), DEFAULT_WINDOW_AZIMUTH)
         self.illuminance_threshold: float = _safe_float(options.get(CONF_ILLUMINANCE_THRESHOLD, data.get(CONF_ILLUMINANCE_THRESHOLD)), DEFAULT_ILLUMINANCE_THRESHOLD)
         self.has_illuminance_sensor: bool = bool(self.sensor_illuminance and isinstance(self.sensor_illuminance, str) and self.sensor_illuminance.strip())
+        self.has_wind_speed_sensor: bool = bool(self.sensor_wind_speed and isinstance(self.sensor_wind_speed, str) and self.sensor_wind_speed.strip())
+        self.has_wind_dir_sensor: bool = bool(self.sensor_wind_direction and isinstance(self.sensor_wind_direction, str) and self.sensor_wind_direction.strip())
 
         self.electricity_rate: float = _safe_float(options.get(CONF_ELECTRICITY_RATE, data.get(CONF_ELECTRICITY_RATE, DEFAULT_ELECTRICITY_RATE)), DEFAULT_ELECTRICITY_RATE)
         self.currency_symbol: str = str(options.get(CONF_CURRENCY_SYMBOL, data.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL)))
@@ -145,7 +154,8 @@ class ThermalBalanceCoordinator:
         self.hlc_theoretical: float = (self.a_wall * self.u_wall) + (self.window_area * self.u_window)
         self.use_empirical_hlc: bool = bool(options.get(CONF_USE_EMPIRICAL_HLC, data.get(CONF_USE_EMPIRICAL_HLC, DEFAULT_USE_EMPIRICAL_HLC)))
         self.hlc_closed: float = self.hlc_theoretical
-        self.hlc_vent: float = 4.0 * self.volume * 0.336
+        self.current_ach: float = 0.0
+        self.hlc_vent: float = 0.0
 
         # Empirical K-Factor auto-calibration variables
         self.empirical_k_val: float = self.hlc_theoretical
@@ -165,6 +175,8 @@ class ThermalBalanceCoordinator:
         self.window_is_open: bool = False
         self.illuminance_val: float = 500.0
         self.curtains_closed: bool = False
+        self.wind_speed_ms: float = 0.0
+        self.wind_dir_deg: float = 0.0
 
         # Energy accumulators (kWh)
         self.total_heat_absorbed: float = 0.0
@@ -277,6 +289,8 @@ class ThermalBalanceCoordinator:
                 self.sensor_ac_power,
                 self.sensor_window,
                 self.sensor_illuminance,
+                self.sensor_wind_speed,
+                self.sensor_wind_direction,
             ] if entity
         ]
 
@@ -329,6 +343,17 @@ class ThermalBalanceCoordinator:
             self.illuminance_val = self._get_float_state(self.sensor_illuminance, 500.0)
             self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
 
+        if self.has_wind_speed_sensor:
+            # check units, if km/h then convert to m/s
+            state = self.hass.states.get(self.sensor_wind_speed)
+            val = self._get_float_state(self.sensor_wind_speed, 0.0)
+            if state and state.attributes.get("unit_of_measurement", "").lower() in ["km/h", "kmh"]:
+                val = val / 3.6
+            self.wind_speed_ms = val
+
+        if self.has_wind_dir_sensor:
+            self.wind_dir_deg = self._get_float_state(self.sensor_wind_direction, 0.0)
+
     def _get_float_state(self, entity_id: str, default: float) -> float:
         """Extract float value safely from Home Assistant state machine."""
         if not entity_id:
@@ -379,6 +404,13 @@ class ThermalBalanceCoordinator:
         elif entity_id == self.sensor_illuminance:
             self.illuminance_val = self._safe_float_val(new_state.state, self.illuminance_val)
             self.curtains_closed = (self.illuminance_val < self.illuminance_threshold)
+        elif entity_id == self.sensor_wind_speed:
+            val = self._safe_float_val(new_state.state, 0.0)
+            if new_state.attributes.get("unit_of_measurement", "").lower() in ["km/h", "kmh"]:
+                val = val / 3.6
+            self.wind_speed_ms = val
+        elif entity_id == self.sensor_wind_direction:
+            self.wind_dir_deg = self._safe_float_val(new_state.state, self.wind_dir_deg)
 
         self.recalculate()
 
@@ -539,7 +571,27 @@ class ThermalBalanceCoordinator:
         else:
             insulation_grade = "Низкая (сквозняки)"
 
-        hlc = self.hlc_closed + (self.hlc_vent if self.window_is_open else 0.0)
+        # Calculate Wind-driven ventilation
+        if self.window_is_open:
+            base_ach = 1.0  # minimal natural ventilation
+            wind_effect = 0.0
+            if self.has_wind_speed_sensor:
+                # Calculate difference between wind direction and window azimuth
+                angle_diff = abs(self.wind_dir_deg - self.window_azimuth) % 360
+                if angle_diff > 180:
+                    angle_diff = 360 - angle_diff
+                # Cosine factor: 1.0 if blowing directly in, -1.0 if blowing away
+                cos_factor = math.cos(math.radians(angle_diff))
+                # If wind is blowing towards the window (angle_diff < 90), effect is positive
+                if cos_factor > 0:
+                    wind_effect = self.wind_speed_ms * 1.5 * cos_factor
+            self.current_ach = base_ach + wind_effect
+            self.hlc_vent = self.current_ach * self.volume * 0.336
+        else:
+            self.current_ach = 0.0
+            self.hlc_vent = 0.0
+
+        hlc = self.hlc_closed + self.hlc_vent
 
         # Step 3: Instantaneous Powers (Watts)
         # 1. Environmental heat exchange P_env, ventilation heat P_vent, conduction P_wall and Heat Gain P_gain
@@ -633,6 +685,10 @@ class ThermalBalanceCoordinator:
                 "curtains_state": "Зашторены (Closed)" if self.curtains_closed else "Открыты (Open)",
                 "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
                 "g_solar_factor": g_solar_factor,
+                "wind_speed_ms": round(self.wind_speed_ms, 2) if self.has_wind_speed_sensor else None,
+                "wind_dir_deg": round(self.wind_dir_deg, 1) if self.has_wind_dir_sensor else None,
+                "window_azimuth": round(self.window_azimuth, 1),
+                "ventilation_ach": round(self.current_ach, 2),
             },
             SENSOR_INSTANT_NET_BALANCE: {
                 "p_env_w": round(p_env, 1),

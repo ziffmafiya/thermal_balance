@@ -25,7 +25,10 @@
           "electricity_rate": "Electricity Rate per kWh",
           "currency_symbol": "Currency Symbol",
           "sensor_ac_power": "AC Power Consumption",
-          "sensor_window": "Window State"
+          "sensor_window": "Window State",
+          "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
+          "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
+          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)"
         },
         "data_description": {
           "room_area": "Floor area of the room in m²",
@@ -46,7 +49,10 @@
           "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
           "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
           "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
-          "sensor_window": "Binary sensor indicating window open/closed state (optional)"
+          "sensor_window": "Binary sensor indicating window open/closed state (optional)",
+          "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
+          "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
+          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)"
         }
       }
     },
@@ -78,7 +84,10 @@
           "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
           "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
           "sensor_ac_power": "AC Power Consumption",
-          "sensor_window": "Window State"
+          "sensor_window": "Window State",
+          "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
+          "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
+          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)"
         },
         "data_description": {
           "room_area": "Floor area of the room in m²",
@@ -99,7 +108,10 @@
           "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
           "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
           "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
-          "sensor_window": "Binary sensor indicating window open/closed state (optional)"
+          "sensor_window": "Binary sensor indicating window open/closed state (optional)",
+          "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
+          "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
+          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)"
         }
       }
     }

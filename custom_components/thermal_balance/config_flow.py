@@ -24,6 +24,9 @@ from .const import (
     CONF_SENSOR_T_AC_EXIT,
     CONF_SENSOR_T_IN,
     CONF_SENSOR_T_OUT,
+    CONF_SENSOR_WIND_SPEED,
+    CONF_SENSOR_WIND_DIRECTION,
+    CONF_WINDOW_AZIMUTH,
     CONF_SENSOR_WINDOW,
     CONF_U_WALL,
     CONF_U_WINDOW,
@@ -41,6 +44,7 @@ from .const import (
     DEFAULT_U_WINDOW,
     DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
+    DEFAULT_WINDOW_AZIMUTH,
     DOMAIN,
 )
 
@@ -152,8 +156,8 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
                 selector.EntitySelectorConfig(domain=["sensor", "input_number", "number"])
             )
 
-    # Optional Sensors (Humidity, Measured AC Exit Temperature / Delta T, Window, Illuminance)
-    for conf_key in (CONF_SENSOR_RH_IN, CONF_SENSOR_RH_OUT, CONF_SENSOR_T_AC_EXIT, CONF_SENSOR_ILLUMINANCE):
+    # Optional Sensors (Humidity, Measured AC Exit Temperature / Delta T, Window, Illuminance, Wind)
+    for conf_key in (CONF_SENSOR_RH_IN, CONF_SENSOR_RH_OUT, CONF_SENSOR_T_AC_EXIT, CONF_SENSOR_ILLUMINANCE, CONF_SENSOR_WIND_SPEED, CONF_SENSOR_WIND_DIRECTION):
         val = defaults.get(conf_key)
         if val and isinstance(val, str) and val.strip():
             schema_dict[vol.Optional(conf_key, default=val)] = selector.EntitySelector(
@@ -190,6 +194,13 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
         schema_dict[vol.Optional(CONF_SENSOR_WINDOW)] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="binary_sensor")
         )
+
+    azimuth_val = _safe_float(defaults.get(CONF_WINDOW_AZIMUTH), DEFAULT_WINDOW_AZIMUTH)
+    schema_dict[vol.Optional(CONF_WINDOW_AZIMUTH, default=azimuth_val)] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=359.9, step=1.0, unit_of_measurement="°", mode=selector.NumberSelectorMode.BOX
+        )
+    )
 
     return vol.Schema(schema_dict)
 

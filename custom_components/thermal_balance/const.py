@@ -23,6 +23,9 @@ CONF_SENSOR_RH_IN: Final = "sensor_rh_in"
 CONF_SENSOR_RH_OUT: Final = "sensor_rh_out"
 CONF_SENSOR_T_AC_EXIT: Final = "sensor_t_ac_exit"
 CONF_SENSOR_ILLUMINANCE: Final = "sensor_illuminance"
+CONF_SENSOR_WIND_SPEED: Final = "sensor_wind_speed"
+CONF_SENSOR_WIND_DIRECTION: Final = "sensor_wind_direction"
+CONF_WINDOW_AZIMUTH: Final = "window_azimuth"
 CONF_ILLUMINANCE_THRESHOLD: Final = "illuminance_threshold"
 
 CONF_ELECTRICITY_RATE: Final = "electricity_rate"
@@ -41,6 +44,7 @@ DEFAULT_USE_EMPIRICAL_HLC: Final = False
 DEFAULT_ILLUMINANCE_THRESHOLD: Final = 150.0
 DEFAULT_ELECTRICITY_RATE: Final = 4.32
 DEFAULT_CURRENCY_SYMBOL: Final = "₴"
+DEFAULT_WINDOW_AZIMUTH: Final = 0.0
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"
