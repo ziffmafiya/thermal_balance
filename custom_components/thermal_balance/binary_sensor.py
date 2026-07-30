@@ -129,9 +129,14 @@ class ThermalBalanceBinarySensor(BinarySensorEntity):
 
         return attrs
 
+    @callback
+    def async_on_coordinator_update(self) -> None:
+        """Update binary sensor state when coordinator notifies."""
+        self.async_write_ha_state()
+
     async def async_added_to_hass(self) -> None:
         """Handle entity addition to Home Assistant."""
         await super().async_added_to_hass()
         self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
+            self.coordinator.async_add_listener(self.async_on_coordinator_update)
         )

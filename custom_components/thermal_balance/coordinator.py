@@ -262,11 +262,23 @@ class ThermalBalanceCoordinator:
             and self.sensor_rh_out.strip().lower() not in ("", "none", "null", "unknown", "unavailable")
         )
 
-    def register_listener(self, update_callback) -> None:
+    @callback
+    def async_add_listener(self, update_callback: Any) -> Any:
+        """Listen for data updates."""
+        self._listeners.append(update_callback)
+
+        @callback
+        def remove_listener() -> None:
+            if update_callback in self._listeners:
+                self._listeners.remove(update_callback)
+
+        return remove_listener
+
+    def register_listener(self, update_callback: Any) -> None:
         """Register entity update callback."""
         self._listeners.append(update_callback)
 
-    def remove_listener(self, update_callback) -> None:
+    def remove_listener(self, update_callback: Any) -> None:
         """Remove entity update callback."""
         if update_callback in self._listeners:
             self._listeners.remove(update_callback)
