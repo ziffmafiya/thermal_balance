@@ -214,7 +214,7 @@ class ThermalBalanceCoordinator:
         self.extra_attributes: Dict[str, Dict[str, Any]] = {
             SENSOR_TIME_TO_1DEG: {
                 "direction": "equilibrium",
-                "direction_text": "Равновесие",
+                "direction_text": "Equilibrium",
             },
             SENSOR_AC_HEAT_OUTPUT: {
                 "sensible_cooling_w": 0.0,
@@ -550,9 +550,9 @@ class ThermalBalanceCoordinator:
             self.curtains_closed = False
 
         if not self.has_illuminance_sensor:
-            self.curtains_note = "Датчик освещённости не настроен"
+            self.curtains_note = "Illuminance sensor not configured"
         elif not is_daylight:
-            self.curtains_note = "Ночь: авто-определение штор отключено (порог люкс не применяется)"
+            self.curtains_note = "Night: auto curtain detection disabled (lux threshold not applied)"
         else:
             self.curtains_note = None
 
@@ -583,13 +583,13 @@ class ThermalBalanceCoordinator:
 
         dev_pct = ((self.empirical_k_val - self.hlc_theoretical) / max(0.1, self.hlc_theoretical)) * 100.0
         if dev_pct <= 15.0:
-            insulation_grade = "Отличная (паспорт)"
+            insulation_grade = "Excellent (passport)"
         elif dev_pct <= 35.0:
-            insulation_grade = "Хорошая (умеренная)"
+            insulation_grade = "Good (moderate)"
         elif dev_pct <= 65.0:
-            insulation_grade = "Средняя (мостики)"
+            insulation_grade = "Average (thermal bridges)"
         else:
-            insulation_grade = "Низкая (сквозняки)"
+            insulation_grade = "Poor (drafts)"
 
         # Calculate Wind-driven ventilation
         if self.window_is_open:
@@ -629,15 +629,15 @@ class ThermalBalanceCoordinator:
         if p_net_sensible > 20.0:
             t_min = (self.c_total / p_net_sensible) * 60.0
             direction = "heating"
-            direction_text = "Нагрев (+1°C)"
+            direction_text = "Heating (+1°C)"
         elif p_net_sensible < -20.0:
             t_min = (self.c_total / abs(p_net_sensible)) * 60.0
             direction = "cooling"
-            direction_text = "Охлаждение (-1°C)"
+            direction_text = "Cooling (-1°C)"
         else:
             t_min = 0.0
             direction = "equilibrium"
-            direction_text = "Равновесие"
+            direction_text = "Equilibrium"
 
         # Step 5: Energy & Cost Integrators (kWh & Currency)
         if self.last_update_time is not None:
@@ -702,7 +702,7 @@ class ThermalBalanceCoordinator:
                 "window_is_open": self.window_is_open,
                 "window_mode": "sensor" if self.has_window_sensor else ("auto (ac off = open)" if self.window_is_open else "auto (ac on = closed)"),
                 "curtains_closed": self.curtains_closed,
-                "curtains_state": "Зашторены (Closed)" if self.curtains_closed else "Открыты (Open)",
+                "curtains_state": "Closed" if self.curtains_closed else "Open",
                 "curtains_note": self.curtains_note,
                 "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
                 "g_solar_factor": g_solar_factor,

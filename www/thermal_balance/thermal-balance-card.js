@@ -779,11 +779,11 @@ class ThermalBalanceCard extends HTMLElement {
       const timeDisplay = this._fmtTime(time1c, direction);
 
       const ventColor = windowOpen ? (pVent > 20 ? '#FF7A3C' : (pVent < -20 ? '#4DA3FF' : '#00C896')) : '#6B7280';
-      const ventValText = !windowOpen ? 'Закрыто (0 W)' : (pVent !== null && pVent !== undefined ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) + ' W' : '—');
+      const ventValText = !windowOpen ? 'Closed (0 W)' : (pVent !== null && pVent !== undefined ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) + ' W' : '—');
 
       const copText = cop !== null ? `COP ${this._fmt(cop, 2)}` : '';
       const shrText = shr !== null ? `SHR ${this._fmt(shr, 0)}%` : '';
-      const ventHeaderBadge = windowOpen ? (pVent !== null ? (pVent >= 0 ? `🪟 +${Math.round(pVent)}W` : `🪟 ${Math.round(pVent)}W`) : '🪟 Открыто') : '🪟 Закрыто';
+      const ventHeaderBadge = windowOpen ? (pVent !== null ? (pVent >= 0 ? `🪟 +${Math.round(pVent)}W` : `🪟 ${Math.round(pVent)}W`) : '🪟 Open') : '🪟 Closed';
       const subtitle = [copText, shrText, ventHeaderBadge].filter(Boolean).join(' · ');
 
       const acRows = [
@@ -884,57 +884,57 @@ class ThermalBalanceCard extends HTMLElement {
                   <div class="ac-grid">
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${windowOpen ? '#FF7A3C' : '#6B7280'}"></span>
-                      <span class="ac-label">Окно (Window)</span>
-                      <span class="ac-val" style="color:${windowOpen ? '#FF7A3C' : '#00C896'}">${windowOpen ? 'Открыто (Open)' : 'Закрыто (Closed)'}</span>
+                      <span class="ac-label">Window</span>
+                      <span class="ac-val" style="color:${windowOpen ? '#FF7A3C' : '#00C896'}">${windowOpen ? 'Open' : 'Closed'}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${ventColor}"></span>
-                      <span class="ac-label">Проветривание (Vent)</span>
+                      <span class="ac-label">Ventilation</span>
                       <span class="ac-val" style="color:${ventColor}">${ventValText}</span>
                     </div>
                     ${windSpeed !== null && windSpeed !== undefined ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#60A5FA"></span>
-                      <span class="ac-label">Ветер (Wind)</span>
+                      <span class="ac-label">Wind</span>
                       <span class="ac-val" style="color:#60A5FA">${this._fmt(windSpeed, 1)} m/s <span class="ac-unit">(${this._fmt(windDir, 0)}°)</span></span>
                     </div>
                     ` : ''}
                     ${windACH !== null && windACH !== undefined && windowOpen ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#34D399"></span>
-                      <span class="ac-label">Смена воздуха (ACH)</span>
-                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">раз/час</span></span>
+                      <span class="ac-label">Air Change (ACH)</span>
+                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">per h</span></span>
                     </div>
                     ` : ''}
                     ${curtainsState !== null && curtainsState !== undefined ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
-                      <span class="ac-label">Шторы (Curtains)</span>
-                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Зашторены (-70%)' : 'Открыты'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
+                      <span class="ac-label">Curtains</span>
+                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Closed (-70%)' : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
                     </div>
                     ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
                     ` : ''}
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#FACC15"></span>
-                      <span class="ac-label">Солнце (Solar)</span>
+                      <span class="ac-label">Solar</span>
                       <span class="ac-val">${pSolar !== null && pSolar !== undefined ? '+' + this._fmt(pSolar, 0) + ' W' : '—'}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#8B5CF6"></span>
-                      <span class="ac-label">Стены/Окна (Walls)</span>
+                      <span class="ac-label">Walls</span>
                       <span class="ac-val">${pWall !== null && pWall !== undefined ? (pWall > 0 ? '+' : '') + this._fmt(pWall, 0) + ' W' : '—'}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#00C896"></span>
-                      <span class="ac-label">K-Фактор (Факт)</span>
+                      <span class="ac-label">K-Factor (Actual)</span>
                       <span class="ac-val" style="color:#00C896">${empiricalK !== null ? this._fmt(empiricalK, 1) + ' W/K' : '—'} <span class="ac-unit">${empiricalKDev !== null ? '(' + (empiricalKDev > 0 ? '+' : '') + this._fmt(empiricalKDev, 0) + '%)' : ''}</span></span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#3B82F6"></span>
-                      <span class="ac-label">Изоляция</span>
-                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || 'Расчётная'}</span>
+                      <span class="ac-label">Insulation</span>
+                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || 'Estimated'}</span>
                     </div>
-                    ${windowOpen ? `<div class="curtains-note">🪟 Окно открыто — K-фактор недостоверен</div>` : ''}
+                    ${windowOpen ? `<div class="curtains-note">🪟 Window is open — K-factor is unreliable</div>` : ''}
                   </div>
                 </div>
 
