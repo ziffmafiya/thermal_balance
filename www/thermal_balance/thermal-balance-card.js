@@ -766,6 +766,7 @@ class ThermalBalanceCard extends HTMLElement {
       const curtainsClosed = this._getAttr('heat_gain', 'curtains_closed');
       const curtainsState = this._getAttr('heat_gain', 'curtains_state');
       const illuminanceLux = this._getAttr('heat_gain', 'illuminance_lux');
+      const curtainsNote = this._getAttr('heat_gain', 'curtains_note');
 
       // time_to_1c attributes
       const direction = this._getAttr('time_to_1c', 'direction') || 'equilibrium';
@@ -911,6 +912,7 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="ac-label">Шторы (Curtains)</span>
                       <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Зашторены (-70%)' : 'Открыты'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
                     </div>
+                    ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
                     ` : ''}
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#FACC15"></span>
@@ -932,6 +934,7 @@ class ThermalBalanceCard extends HTMLElement {
                       <span class="ac-label">Изоляция</span>
                       <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || 'Расчётная'}</span>
                     </div>
+                    ${windowOpen ? `<div class="curtains-note">🪟 Окно открыто — K-фактор недостоверен</div>` : ''}
                   </div>
                 </div>
 
@@ -1285,6 +1288,13 @@ class ThermalBalanceCard extends HTMLElement {
         font-weight: 400;
         font-size: 10.5px;
         opacity: 0.75;
+      }
+      .curtains-note {
+        font-size: 11px;
+        color: var(--tb-secondary);
+        opacity: 0.85;
+        padding: 0 6px 6px 22px;
+        line-height: 1.3;
       }
       .energy-grid {
         display: grid;

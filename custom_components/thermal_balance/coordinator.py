@@ -175,6 +175,7 @@ class ThermalBalanceCoordinator:
         self.window_is_open: bool = False
         self.illuminance_val: float = 500.0
         self.curtains_closed: bool = False
+        self.curtains_note: str | None = None
         self.wind_speed_ms: float = 0.0
         self.wind_dir_deg: float = 0.0
 
@@ -548,6 +549,13 @@ class ThermalBalanceCoordinator:
         else:
             self.curtains_closed = False
 
+        if not self.has_illuminance_sensor:
+            self.curtains_note = "Датчик освещённости не настроен"
+        elif not is_daylight:
+            self.curtains_note = "Ночь: авто-определение штор отключено (порог люкс не применяется)"
+        else:
+            self.curtains_note = None
+
         g_solar_factor = 0.20 if self.curtains_closed else 0.70
         p_solar = self.window_area * self.solar_val * g_solar_factor
 
@@ -695,6 +703,7 @@ class ThermalBalanceCoordinator:
                 "window_mode": "sensor" if self.has_window_sensor else ("auto (ac off = open)" if self.window_is_open else "auto (ac on = closed)"),
                 "curtains_closed": self.curtains_closed,
                 "curtains_state": "Зашторены (Closed)" if self.curtains_closed else "Открыты (Open)",
+                "curtains_note": self.curtains_note,
                 "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
                 "g_solar_factor": g_solar_factor,
                 "wind_speed_ms": round(self.wind_speed_ms, 2) if self.has_wind_speed_sensor else None,
