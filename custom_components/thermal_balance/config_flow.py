@@ -98,10 +98,10 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
         ): selector.SelectSelector(
             selector.SelectSelectorConfig(
                 options=[
-                    selector.SelectOptionDict(value="0.25", label="0.25 (1 стена из 4 — обычная комната)"),
-                    selector.SelectOptionDict(value="0.50", label="0.50 (2 стены из 4 — угловая комната)"),
-                    selector.SelectOptionDict(value="0.75", label="0.75 (3 стены из 4)"),
-                    selector.SelectOptionDict(value="1.00", label="1.00 (4 стены — отдельно стоящий дом)"),
+                    selector.SelectOptionDict(value="0.25", label="0.25 (1 of 4 walls — typical room)"),
+                    selector.SelectOptionDict(value="0.50", label="0.50 (2 of 4 walls — corner room)"),
+                    selector.SelectOptionDict(value="0.75", label="0.75 (3 of 4 walls)"),
+                    selector.SelectOptionDict(value="1.00", label="1.00 (4 walls — detached house)"),
                 ],
                 mode=selector.SelectSelectorMode.DROPDOWN,
             )
