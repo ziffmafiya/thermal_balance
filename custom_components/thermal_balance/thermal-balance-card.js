@@ -1291,11 +1291,19 @@ class ThermalBalanceCard extends HTMLElement {
         opacity: 0.75;
       }
       .curtains-note {
-        font-size: 11px;
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 3px 6px 6px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        font-size: 10.5px;
+        line-height: 1.35;
         color: var(--tb-secondary);
-        opacity: 0.85;
-        padding: 0 6px 6px 22px;
-        line-height: 1.3;
+        opacity: 0.9;
       }
       .energy-grid {
         display: grid;
