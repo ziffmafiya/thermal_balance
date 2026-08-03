@@ -60,7 +60,7 @@ def _safe_float(val: Any, default: float) -> float:
 
 
 def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
-    """Return common configuration schema with defaults."""
+    """Return common configuration schema with defaults, ordered logically by input type."""
     ext_walls_default = str(_safe_float(defaults.get(CONF_EXTERNAL_WALLS_FRACTION), DEFAULT_EXTERNAL_WALLS_FRACTION))
     if ext_walls_default not in ("0.25", "0.5", "0.50", "0.75", "1.0", "1.00"):
         ext_walls_default = "0.25"
@@ -69,84 +69,12 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
     if ext_walls_default == "1.0":
         ext_walls_default = "1.00"
 
-    schema_dict = {
-        vol.Required(
-            CONF_ROOM_AREA,
-            default=_safe_float(defaults.get(CONF_ROOM_AREA), DEFAULT_ROOM_AREA),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=1.0, max=500.0, step=0.1, unit_of_measurement="m²", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_CEILING_HEIGHT,
-            default=_safe_float(defaults.get(CONF_CEILING_HEIGHT), DEFAULT_CEILING_HEIGHT),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=1.0, max=20.0, step=0.1, unit_of_measurement="m", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_WINDOW_AREA,
-            default=_safe_float(defaults.get(CONF_WINDOW_AREA), DEFAULT_WINDOW_AREA),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.0, max=100.0, step=0.1, unit_of_measurement="m²", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_EXTERNAL_WALLS_FRACTION,
-            default=ext_walls_default,
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[
-                    selector.SelectOptionDict(value="0.25", label="0.25 (1 of 4 walls — typical room)"),
-                    selector.SelectOptionDict(value="0.50", label="0.50 (2 of 4 walls — corner room)"),
-                    selector.SelectOptionDict(value="0.75", label="0.75 (3 of 4 walls)"),
-                    selector.SelectOptionDict(value="1.00", label="1.00 (4 walls — detached house)"),
-                ],
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
-        ),
-        vol.Required(
-            CONF_AC_MAX_COOLING,
-            default=_safe_float(defaults.get(CONF_AC_MAX_COOLING), DEFAULT_AC_MAX_COOLING),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=100.0, max=20000.0, step=50.0, unit_of_measurement="W", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_AC_AIRFLOW,
-            default=_safe_float(defaults.get(CONF_AC_AIRFLOW), DEFAULT_AC_AIRFLOW),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=50.0, max=2000.0, step=10.0, unit_of_measurement="m³/h", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_U_WALL,
-            default=_safe_float(defaults.get(CONF_U_WALL), DEFAULT_U_WALL),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.01, max=10.0, step=0.01, unit_of_measurement="W/(m²·K)", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Required(
-            CONF_U_WINDOW,
-            default=_safe_float(defaults.get(CONF_U_WINDOW), DEFAULT_U_WINDOW),
-        ): selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=0.1, max=10.0, step=0.01, unit_of_measurement="W/(m²·K)", mode=selector.NumberSelectorMode.BOX
-            )
-        ),
-        vol.Optional(
-            CONF_USE_EMPIRICAL_HLC,
-            default=bool(defaults.get(CONF_USE_EMPIRICAL_HLC, DEFAULT_USE_EMPIRICAL_HLC)),
-        ): selector.BooleanSelector(),
-    }
+    schema_dict: Dict[Any, Any] = {}
 
-    # Entity selectors (Required - allows sensor or input_number)
+    # =========================================================================
+    # 1. ENTITY SELECTORS (Sensors & Input Numbers)
+    # =========================================================================
+    # 1a. Required Sensor Entities
     for conf_key in (CONF_SENSOR_T_IN, CONF_SENSOR_T_OUT, CONF_SENSOR_SOLAR, CONF_SENSOR_AC_POWER):
         val = defaults.get(conf_key)
         if val and isinstance(val, str) and val.strip():
@@ -158,8 +86,15 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
                 selector.EntitySelectorConfig(domain=["sensor", "input_number", "number"])
             )
 
-    # Optional Sensors (Humidity, Measured AC Exit Temperature / Delta T, Window, Illuminance, Wind)
-    for conf_key in (CONF_SENSOR_RH_IN, CONF_SENSOR_RH_OUT, CONF_SENSOR_T_AC_EXIT, CONF_SENSOR_ILLUMINANCE, CONF_SENSOR_WIND_SPEED, CONF_SENSOR_WIND_DIRECTION):
+    # 1b. Optional Sensor Entities (Humidity, Exit Temp, Illuminance, Wind)
+    for conf_key in (
+        CONF_SENSOR_T_AC_EXIT,
+        CONF_SENSOR_RH_IN,
+        CONF_SENSOR_RH_OUT,
+        CONF_SENSOR_ILLUMINANCE,
+        CONF_SENSOR_WIND_SPEED,
+        CONF_SENSOR_WIND_DIRECTION,
+    ):
         val = defaults.get(conf_key)
         if val and isinstance(val, str) and val.strip():
             schema_dict[vol.Optional(conf_key, default=val)] = selector.EntitySelector(
@@ -169,6 +104,90 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
             schema_dict[vol.Optional(conf_key)] = selector.EntitySelector(
                 selector.EntitySelectorConfig(domain=["sensor", "input_number", "number"])
             )
+
+    # 1c. Optional Binary Sensor (Window State)
+    win_val = defaults.get(CONF_SENSOR_WINDOW)
+    if win_val and isinstance(win_val, str) and win_val.strip():
+        schema_dict[vol.Optional(CONF_SENSOR_WINDOW, default=win_val)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="binary_sensor")
+        )
+    else:
+        schema_dict[vol.Optional(CONF_SENSOR_WINDOW)] = selector.EntitySelector(
+            selector.EntitySelectorConfig(domain="binary_sensor")
+        )
+
+    # =========================================================================
+    # 2. NUMERIC INPUT SELECTORS (Room, Window, AC, Physical & Financial Values)
+    # =========================================================================
+    schema_dict[vol.Required(
+        CONF_ROOM_AREA,
+        default=_safe_float(defaults.get(CONF_ROOM_AREA), DEFAULT_ROOM_AREA),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1.0, max=500.0, step=0.1, unit_of_measurement="m²", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_CEILING_HEIGHT,
+        default=_safe_float(defaults.get(CONF_CEILING_HEIGHT), DEFAULT_CEILING_HEIGHT),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=1.0, max=20.0, step=0.1, unit_of_measurement="m", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_WINDOW_AREA,
+        default=_safe_float(defaults.get(CONF_WINDOW_AREA), DEFAULT_WINDOW_AREA),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=100.0, step=0.1, unit_of_measurement="m²", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    azimuth_val = _safe_float(defaults.get(CONF_WINDOW_AZIMUTH), DEFAULT_WINDOW_AZIMUTH)
+    schema_dict[vol.Optional(CONF_WINDOW_AZIMUTH, default=azimuth_val)] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.0, max=359.9, step=1.0, unit_of_measurement="°", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_AC_MAX_COOLING,
+        default=_safe_float(defaults.get(CONF_AC_MAX_COOLING), DEFAULT_AC_MAX_COOLING),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=100.0, max=20000.0, step=50.0, unit_of_measurement="W", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_AC_AIRFLOW,
+        default=_safe_float(defaults.get(CONF_AC_AIRFLOW), DEFAULT_AC_AIRFLOW),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=50.0, max=2000.0, step=10.0, unit_of_measurement="m³/h", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_U_WALL,
+        default=_safe_float(defaults.get(CONF_U_WALL), DEFAULT_U_WALL),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.01, max=10.0, step=0.01, unit_of_measurement="W/(m²·K)", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    schema_dict[vol.Required(
+        CONF_U_WINDOW,
+        default=_safe_float(defaults.get(CONF_U_WINDOW), DEFAULT_U_WINDOW),
+    )] = selector.NumberSelector(
+        selector.NumberSelectorConfig(
+            min=0.1, max=10.0, step=0.01, unit_of_measurement="W/(m²·K)", mode=selector.NumberSelectorMode.BOX
+        )
+    )
 
     vol_thresh = _safe_float(defaults.get(CONF_ILLUMINANCE_THRESHOLD), DEFAULT_ILLUMINANCE_THRESHOLD)
     schema_dict[vol.Optional(CONF_ILLUMINANCE_THRESHOLD, default=vol_thresh)] = selector.NumberSelector(
@@ -184,23 +203,21 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
         )
     )
 
-    curr_sym = str(defaults.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL))
-    schema_dict[vol.Optional(CONF_CURRENCY_SYMBOL, default=curr_sym)] = selector.TextSelector()
-
-    win_val = defaults.get(CONF_SENSOR_WINDOW)
-    if win_val and isinstance(win_val, str) and win_val.strip():
-        schema_dict[vol.Optional(CONF_SENSOR_WINDOW, default=win_val)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="binary_sensor")
-        )
-    else:
-        schema_dict[vol.Optional(CONF_SENSOR_WINDOW)] = selector.EntitySelector(
-            selector.EntitySelectorConfig(domain="binary_sensor")
-        )
-
-    azimuth_val = _safe_float(defaults.get(CONF_WINDOW_AZIMUTH), DEFAULT_WINDOW_AZIMUTH)
-    schema_dict[vol.Optional(CONF_WINDOW_AZIMUTH, default=azimuth_val)] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=0.0, max=359.9, step=1.0, unit_of_measurement="°", mode=selector.NumberSelectorMode.BOX
+    # =========================================================================
+    # 3. SELECT / DROPDOWN INPUTS (Options & Specifications)
+    # =========================================================================
+    schema_dict[vol.Required(
+        CONF_EXTERNAL_WALLS_FRACTION,
+        default=ext_walls_default,
+    )] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value="0.25", label="0.25 (1 of 4 walls — typical room)"),
+                selector.SelectOptionDict(value="0.50", label="0.50 (2 of 4 walls — corner room)"),
+                selector.SelectOptionDict(value="0.75", label="0.75 (3 of 4 walls)"),
+                selector.SelectOptionDict(value="1.00", label="1.00 (4 walls — detached house)"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
         )
     )
 
@@ -220,6 +237,20 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
             mode=selector.SelectSelectorMode.DROPDOWN,
         )
     )
+
+    # =========================================================================
+    # 4. TEXT INPUTS
+    # =========================================================================
+    curr_sym = str(defaults.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL))
+    schema_dict[vol.Optional(CONF_CURRENCY_SYMBOL, default=curr_sym)] = selector.TextSelector()
+
+    # =========================================================================
+    # 5. BOOLEAN TOGGLES / SWITCHES
+    # =========================================================================
+    schema_dict[vol.Optional(
+        CONF_USE_EMPIRICAL_HLC,
+        default=bool(defaults.get(CONF_USE_EMPIRICAL_HLC, DEFAULT_USE_EMPIRICAL_HLC)),
+    )] = selector.BooleanSelector()
 
     return vol.Schema(schema_dict)
 
