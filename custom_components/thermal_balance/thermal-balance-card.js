@@ -768,6 +768,7 @@ class ThermalBalanceCard extends HTMLElement {
       const curtainsState = this._getAttr('heat_gain', 'curtains_state');
       const illuminanceLux = this._getAttr('heat_gain', 'illuminance_lux');
       const curtainsNote = this._getAttr('heat_gain', 'curtains_note');
+      const curtainReducePct = this._getAttr('heat_gain', 'curtain_glass_reduce_percent') || 74;
 
       // time_to_1c attributes
       const direction = this._getAttr('time_to_1c', 'direction') || 'equilibrium';
@@ -911,7 +912,7 @@ class ThermalBalanceCard extends HTMLElement {
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
                       <span class="ac-label">Curtains</span>
-                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Closed (-70%)' : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
+                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? `Closed (-${curtainReducePct}%)` : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
                     </div>
                     ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
                     ` : ''}

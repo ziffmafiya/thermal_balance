@@ -390,12 +390,13 @@ class ThermalBalanceCard extends HTMLElement {
 
     const heatEid = this._resolveEntity('heat_gain');
     const coolEid = this._resolveEntity('ac_cooling');
-    if (!heatEid && !coolEid) {
+    const netEid = this._resolveEntity('net_balance');
+    if (!heatEid && !coolEid && !netEid) {
       this._fetchingHistory = false;
       return;
     }
 
-    const entityIds = [heatEid, coolEid].filter(Boolean);
+    const entityIds = [heatEid, coolEid, netEid].filter(Boolean);
     const startTime = new Date(now - 24 * 3600 * 1000).toISOString();
 
     this._hass.callWS({
@@ -413,13 +414,13 @@ class ThermalBalanceCard extends HTMLElement {
     });
   }
 
-  _sampleHistory(key, liveVal, numPoints = 25) {
+  _sampleHistory(key, liveVal, numPoints = 288) {
     const eid = this._resolveEntity(key);
     const result = new Array(numPoints).fill(0);
 
     if (!eid || !this._historyData || !this._historyData[eid]) {
       if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = Math.max(0, liveVal);
+        result[numPoints - 1] = liveVal;
       }
       return result;
     }
@@ -427,7 +428,7 @@ class ThermalBalanceCard extends HTMLElement {
     const items = this._historyData[eid];
     if (!Array.isArray(items) || items.length === 0) {
       if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = Math.max(0, liveVal);
+        result[numPoints - 1] = liveVal;
       }
       return result;
     }
@@ -454,11 +455,11 @@ class ThermalBalanceCard extends HTMLElement {
           break;
         }
       }
-      result[i] = Math.max(0, currentVal);
+      result[i] = currentVal;
     }
 
     if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-      result[numPoints - 1] = Math.max(0, liveVal);
+      result[numPoints - 1] = liveVal;
     }
 
     return result;
@@ -656,7 +657,7 @@ class ThermalBalanceCard extends HTMLElement {
             symbol: 'circle',
             symbolSize: 6,
             itemStyle: { color: '#4DA3FF' },
-            lineStyle: { width: 2.2, color: '#4DA3FF' },
+            lineStyle: { width: 2.0, color: '#4DA3FF' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: 'rgba(77, 163, 255, 0.25)' },
@@ -767,6 +768,7 @@ class ThermalBalanceCard extends HTMLElement {
       const curtainsState = this._getAttr('heat_gain', 'curtains_state');
       const illuminanceLux = this._getAttr('heat_gain', 'illuminance_lux');
       const curtainsNote = this._getAttr('heat_gain', 'curtains_note');
+      const curtainReducePct = this._getAttr('heat_gain', 'curtain_glass_reduce_percent') || 74;
 
       // time_to_1c attributes
       const direction = this._getAttr('time_to_1c', 'direction') || 'equilibrium';
@@ -910,7 +912,7 @@ class ThermalBalanceCard extends HTMLElement {
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
                       <span class="ac-label">Curtains</span>
-                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? 'Closed (-70%)' : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
+                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? `Closed (-${curtainReducePct}%)` : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
                     </div>
                     ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
                     ` : ''}

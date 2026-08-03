@@ -729,6 +729,7 @@ class ThermalBalanceCoordinator:
                 "curtains_note": self.curtains_note,
                 "curtain_type": self.curtain_type,
                 "curtain_saved_percent": int(round(self.curtain_saved_fraction * 100)),
+                "curtain_glass_reduce_percent": int(round((0.70 - self.curtain_g_closed) / 0.70 * 100)),
                 "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
                 "g_solar_factor": g_solar_factor,
                 "wind_speed_ms": round(self.wind_speed_ms, 2) if self.has_wind_speed_sensor else None,
