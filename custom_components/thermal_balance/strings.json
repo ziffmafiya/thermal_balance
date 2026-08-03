@@ -28,7 +28,8 @@
           "sensor_window": "Window State",
           "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
           "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
-          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)"
+          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)",
+          "curtain_type": "Curtain / Shading Type"
         },
         "data_description": {
           "room_area": "Floor area of the room in m²",
@@ -52,7 +53,8 @@
           "sensor_window": "Binary sensor indicating window open/closed state (optional)",
           "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
           "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
-          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)"
+          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)",
+          "curtain_type": "Select type of window shading installed (Blackout curtains block ~93% solar heat gain)"
         }
       }
     },
@@ -87,7 +89,8 @@
           "sensor_window": "Window State",
           "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
           "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
-          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)"
+          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)",
+          "curtain_type": "Curtain / Shading Type"
         },
         "data_description": {
           "room_area": "Floor area of the room in m²",
@@ -111,7 +114,8 @@
           "sensor_window": "Binary sensor indicating window open/closed state (optional)",
           "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
           "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
-          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)"
+          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)",
+          "curtain_type": "Select type of window shading installed (Blackout curtains block ~93% solar heat gain)"
         }
       }
     }

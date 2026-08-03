@@ -36,6 +36,7 @@ from .const import (
     CONF_U_WINDOW,
     CONF_USE_EMPIRICAL_HLC,
     CONF_WINDOW_AREA,
+    CONF_CURTAIN_TYPE,
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
@@ -49,6 +50,7 @@ from .const import (
     DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
     DEFAULT_WINDOW_AZIMUTH,
+    DEFAULT_CURTAIN_TYPE,
     DOMAIN,
     SENSOR_AC_CARNOT_COP,
     SENSOR_AC_CONDENSATION_RATE,
@@ -66,6 +68,14 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+CURTAIN_TYPE_FACTORS: Dict[str, tuple[float, float]] = {
+    "roller_gaps": (0.18, 0.52), # Indoor roller blinds with gaps (blocks 74% window heat / 52% total solar)
+    "blackout": (0.05, 0.65),    # Sealed blackout curtains (blocks 93% window heat / 65% total solar)
+    "standard": (0.20, 0.50),    # Standard curtains (blocks 71% window heat / 50% total solar)
+    "blinds": (0.35, 0.35),      # Light blinds / sheers (blocks 50% window heat / 35% total solar)
+    "external": (0.00, 0.70),    # External roller shutters (blocks 100% window heat / 70% total solar)
+}
 
 
 def _safe_float(val: Any, default: float) -> float:
@@ -141,6 +151,9 @@ class ThermalBalanceCoordinator:
 
         self.electricity_rate: float = _safe_float(options.get(CONF_ELECTRICITY_RATE, data.get(CONF_ELECTRICITY_RATE, DEFAULT_ELECTRICITY_RATE)), DEFAULT_ELECTRICITY_RATE)
         self.currency_symbol: str = str(options.get(CONF_CURRENCY_SYMBOL, data.get(CONF_CURRENCY_SYMBOL, DEFAULT_CURRENCY_SYMBOL)))
+        self.curtain_type: str = str(options.get(CONF_CURTAIN_TYPE, data.get(CONF_CURTAIN_TYPE, DEFAULT_CURTAIN_TYPE)))
+        if self.curtain_type not in CURTAIN_TYPE_FACTORS:
+            self.curtain_type = "blackout"
 
         # Pre-calculated static thermal capacity values (Step 1)
         self.volume: float = self.room_area * self.ceiling_height
@@ -262,6 +275,16 @@ class ThermalBalanceCoordinator:
             and isinstance(self.sensor_rh_out, str)
             and self.sensor_rh_out.strip().lower() not in ("", "none", "null", "unknown", "unavailable")
         )
+
+    @property
+    def curtain_g_closed(self) -> float:
+        """Return solar transmittance factor when curtains are closed."""
+        return CURTAIN_TYPE_FACTORS.get(self.curtain_type, (0.05, 0.65))[0]
+
+    @property
+    def curtain_saved_fraction(self) -> float:
+        """Return fraction of incident solar radiation saved by closing curtains."""
+        return CURTAIN_TYPE_FACTORS.get(self.curtain_type, (0.05, 0.65))[1]
 
     @callback
     def async_add_listener(self, update_callback: Any) -> Any:
@@ -556,7 +579,7 @@ class ThermalBalanceCoordinator:
         else:
             self.curtains_note = None
 
-        g_solar_factor = 0.20 if self.curtains_closed else 0.70
+        g_solar_factor = self.curtain_g_closed if self.curtains_closed else 0.70
         p_solar = self.window_area * self.solar_val * g_solar_factor
 
         # Sample empirical K-factor only during steady-state (not during rapid temperature drawdown)
@@ -648,7 +671,7 @@ class ThermalBalanceCoordinator:
                 e_cool_new = (p_cooling * delta_hours) / 1000.0
                 e_ac_elec_new = (self.ac_power_val * delta_hours) / 1000.0
                 
-                p_solar_saved = (self.window_area * self.solar_val * 0.50) if self.curtains_closed else 0.0
+                p_solar_saved = (self.window_area * self.solar_val * self.curtain_saved_fraction) if self.curtains_closed else 0.0
                 e_shading_saved_new = (p_solar_saved * delta_hours) / 1000.0
 
                 self.total_heat_absorbed += e_heat_new
@@ -704,6 +727,8 @@ class ThermalBalanceCoordinator:
                 "curtains_closed": self.curtains_closed,
                 "curtains_state": "Closed" if self.curtains_closed else "Open",
                 "curtains_note": self.curtains_note,
+                "curtain_type": self.curtain_type,
+                "curtain_saved_percent": int(round(self.curtain_saved_fraction * 100)),
                 "illuminance_lux": round(self.illuminance_val, 1) if self.has_illuminance_sensor else None,
                 "g_solar_factor": g_solar_factor,
                 "wind_speed_ms": round(self.wind_speed_ms, 2) if self.has_wind_speed_sensor else None,

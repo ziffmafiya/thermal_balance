@@ -113,14 +113,16 @@ class ThermalBalanceBinarySensor(BinarySensorEntity):
             symbol = self.coordinator.currency_symbol
             is_rec = self.is_on
             
+            saved_fraction = self.coordinator.curtain_saved_fraction
+            glass_reduce_pct = int(round((0.70 - self.coordinator.curtain_g_closed) / 0.70 * 100))
             # Potential heat reduction in Watts
-            pot_w = self.coordinator.window_area * solar * 0.50
+            pot_w = self.coordinator.window_area * solar * saved_fraction
             # Estimated electricity saved in UAH/day (assuming COP ~ 3.2)
             saved_kwh_day = (pot_w / 3.2 / 1000.0) * 12.0
             saved_cost_day = saved_kwh_day * rate
 
             if is_rec:
-                attrs["advice"] = f"High solar radiation ({solar:.0f} W/m²). Close curtains to reduce solar heat gain by 70%!"
+                attrs["advice"] = f"High solar radiation ({solar:.0f} W/m²). Close curtains to reduce solar heat gain by {glass_reduce_pct}%!"
             else:
                 attrs["advice"] = "Solar radiation is low or curtains are already closed."
             attrs["solar_radiation_w_m2"] = round(solar, 1)

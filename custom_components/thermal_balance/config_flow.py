@@ -32,6 +32,7 @@ from .const import (
     CONF_U_WINDOW,
     CONF_USE_EMPIRICAL_HLC,
     CONF_WINDOW_AREA,
+    CONF_CURTAIN_TYPE,
     DEFAULT_AC_AIRFLOW,
     DEFAULT_AC_MAX_COOLING,
     DEFAULT_CEILING_HEIGHT,
@@ -45,6 +46,7 @@ from .const import (
     DEFAULT_USE_EMPIRICAL_HLC,
     DEFAULT_WINDOW_AREA,
     DEFAULT_WINDOW_AZIMUTH,
+    DEFAULT_CURTAIN_TYPE,
     DOMAIN,
 )
 
@@ -199,6 +201,23 @@ def get_schema(defaults: Dict[str, Any]) -> vol.Schema:
     schema_dict[vol.Optional(CONF_WINDOW_AZIMUTH, default=azimuth_val)] = selector.NumberSelector(
         selector.NumberSelectorConfig(
             min=0.0, max=359.9, step=1.0, unit_of_measurement="°", mode=selector.NumberSelectorMode.BOX
+        )
+    )
+
+    curtain_type_val = str(defaults.get(CONF_CURTAIN_TYPE, DEFAULT_CURTAIN_TYPE))
+    if curtain_type_val not in ("roller_gaps", "blackout", "standard", "blinds", "external"):
+        curtain_type_val = "roller_gaps"
+
+    schema_dict[vol.Optional(CONF_CURTAIN_TYPE, default=curtain_type_val)] = selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=[
+                selector.SelectOptionDict(value="roller_gaps", label="Indoor Roller Blinds with gaps (blocks 74% heat / 52% total solar)"),
+                selector.SelectOptionDict(value="blackout", label="Sealed Blackout Curtains (blocks 93% heat / 65% total solar)"),
+                selector.SelectOptionDict(value="standard", label="Standard Curtains (blocks 71% heat / 50% total solar)"),
+                selector.SelectOptionDict(value="blinds", label="Light Blinds / Sheers (blocks 50% heat / 35% total solar)"),
+                selector.SelectOptionDict(value="external", label="External Roller Shutters (blocks 100% heat / 70% total solar)"),
+            ],
+            mode=selector.SelectSelectorMode.DROPDOWN,
         )
     )
 

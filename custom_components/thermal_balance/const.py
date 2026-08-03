@@ -30,6 +30,7 @@ CONF_ILLUMINANCE_THRESHOLD: Final = "illuminance_threshold"
 
 CONF_ELECTRICITY_RATE: Final = "electricity_rate"
 CONF_CURRENCY_SYMBOL: Final = "currency_symbol"
+CONF_CURTAIN_TYPE: Final = "curtain_type"
 
 # Defaults
 DEFAULT_U_WALL: Final = 0.3
@@ -45,6 +46,7 @@ DEFAULT_ILLUMINANCE_THRESHOLD: Final = 150.0
 DEFAULT_ELECTRICITY_RATE: Final = 4.32
 DEFAULT_CURRENCY_SYMBOL: Final = "₴"
 DEFAULT_WINDOW_AZIMUTH: Final = 0.0
+DEFAULT_CURTAIN_TYPE: Final = "roller_gaps"
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"
