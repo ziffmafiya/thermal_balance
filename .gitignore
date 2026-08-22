@@ -7,4 +7,6 @@ Thumbs.db
 .idea/
 .vscode/
 .storage/
+.agents/
+skills-lock.json
 rewiu.txt

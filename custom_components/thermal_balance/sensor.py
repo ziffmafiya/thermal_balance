@@ -1,7 +1,9 @@
 """Sensor platform for Thermal Balance custom component."""
+from __future__ import annotations
+
 from dataclasses import dataclass
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -11,10 +13,11 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTime
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
@@ -37,7 +40,7 @@ from .coordinator import ThermalBalanceCoordinator
 _LOGGER = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ThermalBalanceSensorEntityDescription(SensorEntityDescription):
     """Class describing Thermal Balance sensor entities."""
 
@@ -51,6 +54,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_HEAT_OUTPUT,
@@ -58,6 +62,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_INSTANT_NET_BALANCE,
@@ -65,6 +70,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_CARNOT_COP,
@@ -72,6 +78,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement=None,
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_TIME_TO_1DEG,
@@ -79,6 +86,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=SensorDeviceClass.DURATION,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_DAILY_THERMAL_BALANCE,
@@ -87,6 +95,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
         is_restorable=True,
+        suggested_display_precision=3,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_NET_THERMAL_BALANCE,
@@ -95,6 +104,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
         is_restorable=True,
+        suggested_display_precision=3,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_TOTAL_HEAT_ABSORBED,
@@ -103,6 +113,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL,
         is_restorable=True,
+        suggested_display_precision=3,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_THERMAL_ENERGY_TOTAL,
@@ -111,6 +122,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         is_restorable=True,
+        suggested_display_precision=3,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_CONDENSATION_RATE,
@@ -118,6 +130,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         native_unit_of_measurement="L/h",
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=2,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_EMPIRICAL_K_FACTOR,
@@ -126,6 +139,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=None,
         state_class=SensorStateClass.MEASUREMENT,
         is_restorable=True,
+        suggested_display_precision=2,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_ENERGY_COST,
@@ -134,6 +148,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         is_restorable=True,
+        suggested_display_precision=2,
     ),
     ThermalBalanceSensorEntityDescription(
         key=SENSOR_SHADING_DAILY_SAVINGS,
@@ -142,6 +157,7 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.MONETARY,
         state_class=SensorStateClass.TOTAL,
         is_restorable=True,
+        suggested_display_precision=2,
     ),
 )
 
@@ -152,24 +168,27 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Thermal Balance sensors from a config entry."""
-    coordinator: ThermalBalanceCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: ThermalBalanceCoordinator = entry.runtime_data
 
-    entities = [
+    async_add_entities(
         ThermalBalanceSensor(coordinator, entry, description)
         for description in SENSOR_TYPES
-    ]
-
-    async_add_entities(entities)
+    )
 
 
-class ThermalBalanceSensor(RestoreEntity, SensorEntity):
+class ThermalBalanceSensor(CoordinatorEntity[ThermalBalanceCoordinator], RestoreEntity, SensorEntity):
     """Representation of a Thermal Balance Sensor."""
 
     entity_description: ThermalBalanceSensorEntityDescription
 
-    def __init__(self, coordinator: ThermalBalanceCoordinator, entry: ConfigEntry, description: ThermalBalanceSensorEntityDescription) -> None:
+    def __init__(
+        self,
+        coordinator: ThermalBalanceCoordinator,
+        entry: ConfigEntry,
+        description: ThermalBalanceSensorEntityDescription,
+    ) -> None:
         """Initialize the sensor."""
-        self.coordinator = coordinator
+        super().__init__(coordinator)
         self.entry = entry
         self.entity_description = description
 
@@ -178,12 +197,12 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.entry_id)},
             name=entry.title,
-            manufacturer="Custom Integration",
-            model="Thermal Thermodynamics Hub",
+            manufacturer="Thermal Balance",
+            model="Thermodynamics Hub",
         )
 
     @property
-    def native_unit_of_measurement(self) -> Optional[str]:
+    def native_unit_of_measurement(self) -> str | None:
         """Return dynamic unit of measurement for monetary sensors."""
         key = self.entity_description.key
         if key in (SENSOR_AC_ENERGY_COST, SENSOR_SHADING_DAILY_SAVINGS):
@@ -191,12 +210,12 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
         return self.entity_description.native_unit_of_measurement
 
     @property
-    def native_value(self) -> Optional[float]:
+    def native_value(self) -> float | None:
         """Return native value of sensor."""
         return self.coordinator.data.get(self.entity_description.key)
 
     @property
-    def extra_state_attributes(self) -> Optional[dict[str, Any]]:
+    def extra_state_attributes(self) -> dict[str, Any] | None:
         """Return extra state attributes for entity."""
         return self.coordinator.extra_attributes.get(self.entity_description.key)
 
@@ -204,7 +223,6 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
         """Handle entity addition to Home Assistant."""
         await super().async_added_to_hass()
 
-        # Restore state if applicable
         if self.entity_description.is_restorable:
             last_state = await self.async_get_last_state()
             if last_state is not None and last_state.state not in ("unknown", "unavailable"):
@@ -216,32 +234,15 @@ class ThermalBalanceSensor(RestoreEntity, SensorEntity):
                         self.coordinator.ac_thermal_energy_total = restored_val
                     elif self.entity_description.key == SENSOR_EMPIRICAL_K_FACTOR:
                         self.coordinator.empirical_k_val = restored_val
-                    elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE:
-                        if last_state.attributes:
-                            if "daily_heat_absorbed" in last_state.attributes:
-                                self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
-                            if "daily_ac_thermal_energy" in last_state.attributes:
-                                self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
-                            if "daily_ac_elec_kwh" in last_state.attributes:
-                                self.coordinator.daily_ac_elec_kwh = float(last_state.attributes["daily_ac_elec_kwh"])
-                            if "daily_shading_heat_saved_kwh" in last_state.attributes:
-                                self.coordinator.daily_shading_heat_saved_kwh = float(last_state.attributes["daily_shading_heat_saved_kwh"])
+                    elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE and last_state.attributes:
+                        if "daily_heat_absorbed" in last_state.attributes:
+                            self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
+                        if "daily_ac_thermal_energy" in last_state.attributes:
+                            self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
+                        if "daily_ac_elec_kwh" in last_state.attributes:
+                            self.coordinator.daily_ac_elec_kwh = float(last_state.attributes["daily_ac_elec_kwh"])
+                        if "daily_shading_heat_saved_kwh" in last_state.attributes:
+                            self.coordinator.daily_shading_heat_saved_kwh = float(last_state.attributes["daily_shading_heat_saved_kwh"])
                     _LOGGER.debug("Restored %s = %f", self.entity_description.key, restored_val)
                 except (ValueError, TypeError):
                     pass
-
-        # Register update listener
-        self.coordinator.register_listener(self.async_on_coordinator_update)
-
-        # Force coordinator recalculation so restored accumulators reflect immediately in states
-        self.coordinator.recalculate()
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Handle entity removal from Home Assistant."""
-        self.coordinator.remove_listener(self.async_on_coordinator_update)
-        await super().async_will_remove_from_hass()
-
-    @callback
-    def async_on_coordinator_update(self) -> None:
-        """Update sensor state when coordinator notifies."""
-        self.async_write_ha_state()
