@@ -149,6 +149,23 @@ class TestThermodynamicModel(unittest.TestCase):
         self.assertEqual(result.direction, "cooling")
         self.assertGreater(result.time_to_1deg_min, 0.0)
 
+    def test_thermal_balance_negative_heat_loss(self) -> None:
+        """Test negative heat flux (heat loss) when outdoor is cooler and window is open."""
+        inputs = ThermodynamicInputs(
+            t_in=24.0,
+            t_out=18.0,
+            solar_irradiance=0.0,
+            ac_power=0.0,
+            window_is_open=True,
+        )
+        result = calculate_thermal_balance(self.geometry, inputs, 3350.0, 370.0)
+
+        # In cold weather with window open, p_gain / p_env must be negative (heat loss)
+        self.assertLess(result.p_gain, 0.0)
+        self.assertLess(result.p_env, 0.0)
+        self.assertLess(result.p_net, 0.0)
+        self.assertEqual(result.direction, "cooling")
+
     def test_curtain_shading_effect(self) -> None:
         """Test reduction of solar heat gain with curtains closed."""
         inputs_open = ThermodynamicInputs(

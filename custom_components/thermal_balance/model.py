@@ -278,7 +278,7 @@ def calculate_thermal_balance(
     p_vent = hlc_vent * delta_t if inputs.window_is_open else 0.0
     p_trans = p_wall + p_vent
     p_env = p_trans + p_solar
-    p_gain = max(0.0, p_env)
+    p_gain = p_env
 
     # 4. AC Cooling calculations
     ac_perf = calculate_ac_performance(inputs, ac_max_cooling, ac_airflow_m3h)
