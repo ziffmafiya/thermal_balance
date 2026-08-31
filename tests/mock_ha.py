@@ -107,6 +107,9 @@ def setup_mock_homeassistant() -> None:
     ha_helpers_cv.positive_float = lambda v: float(v)
     ha_helpers_cv.boolean = lambda v: bool(v)
     ha_helpers_cv.make_entity_service_schema = lambda schema: vol.Schema(schema)
+    ha_helpers_cv.config_entry_only_config_schema = lambda domain: vol.Schema({})
+    ha_helpers_cv.empty_config_schema = lambda domain: vol.Schema({})
+    ha_helpers_cv.platform_only_config_schema = lambda domain: vol.Schema({})
 
     ha_helpers_event = ModuleType("homeassistant.helpers.event")
     ha_helpers_selector = ModuleType("homeassistant.helpers.selector")

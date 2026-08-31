@@ -38,6 +38,9 @@ PLATFORMS: list[Platform] = [
     Platform.NUMBER,
 ]
 
+# Configuration schema (Config Entry Only)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 # Track whether the frontend card has been registered (once per HA session)
 _FRONTEND_REGISTERED = False
 

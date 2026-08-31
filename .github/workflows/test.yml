@@ -27,6 +27,16 @@ jobs:
         run: |
           python -m unittest discover -s tests -v
 
+  hassfest:
+    name: Home Assistant Hassfest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Hassfest Action
+        uses: home-assistant/actions/hassfest@master
+
   hacs-validation:
     name: HACS Repository Validation
     runs-on: ubuntu-latest
