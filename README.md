@@ -1,38 +1,54 @@
 # 🌡️ Thermal Balance — Home Assistant Custom Component & Premium Card
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
-[![version](https://img.shields.io/badge/version-v1.6.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
+[![version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
+[![Tests](https://github.com/ziffmafiya/thermal_balance/actions/workflows/test.yml/badge.svg)](https://github.com/ziffmafiya/thermal_balance/actions)
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fziffmafiya%2Fthermal_balance&category=Integration)
 
-**Thermal Balance** is a physics-based custom integration and Lovelace dashboard card for Home Assistant. It models room thermodynamics as an open system, calculating real-time heat gain, solar radiation, air conditioner cooling output, sensible/latent heat split, ventilation heat exchange, smart curtain shading, empirical $K$-factor auto-calibration, net energy balance, temperature shift forecasts, electricity cost tracking, and smart advice alerts.
+**Thermal Balance** is a physics-based custom integration and Lovelace dashboard card for Home Assistant. It models room thermodynamics as an open system in both **cooling** (summer AC) and **heating** (winter heat pump) modes. It calculates real-time heat flux, clear-sky solar irradiance, Angle of Incidence (AOI) solar geometry, sensible/latent AC heat output, natural ventilation infiltration, smart curtain shading, dynamic $dT/dt$ $K$-factor auto-calibration, temperature shift forecasts, electricity cost tracking, and smart advice alerts.
 
 ---
 
 ## 🌟 Key Features
 
-* **💡 Smart Advice & Alerts (`binary_sensor`)**:
-  * `binary_sensor.thermal_balance_open_window_recommended`: Triggers when outdoor air is cooler than indoor temperature ($T_{\text{out}} < T_{\text{in}} - 1.0^\circ\text{C}$), suggesting free natural ventilation cooling instead of AC.
-  * `binary_sensor.thermal_balance_close_curtains_recommended`: Triggers under high solar radiation ($I_{\text{solar}} \ge 200\text{ W/m}^2$) when curtains are open, recommending shading to prevent heat influx.
-* **💰 Financial Savings & Cost Calculator**:
-  * Configurable electricity tariff (e.g. `4.32 ₴/kWh`) and currency symbol (`₴` / `UAH`).
-  * `sensor.thermal_balance_ac_energy_cost`: Computes real-time daily AC electricity expense in currency units.
-  * `sensor.thermal_balance_shading_daily_savings`: Calculates money saved per day (₴/day) achieved by smart curtain shading.
-* **☀️ Heat Gain ($P_{\text{gain}}$)**: Calculates solar radiation influx through windows and wall/glass thermal transmission ($P_{\text{wall}}$).
-* **🪟 Smart Curtain Shading & Lux Sensor Integration**: Auto-detects open vs closed curtains via an indoor illuminance sensor (Lux). When curtains are closed, solar heat gain is automatically cut by 70% ($g_{\text{shading}} = 0.20$ vs $0.70$).
-* **🌌 Dual Astronomical Daylight Integration**: Integrates Home Assistant's built-in `sun.sun` entity (state & elevation angle $>0^\circ$) and solar irradiance to distinguish daytime solar shading from nighttime indoor artificial lighting.
-* **❄️ AC Cooling Output ($P_{\text{cooling}}$)**: Computes real-time cooling capacity (Watts), Carnot COP, Sensible Heat Ratio (SHR), exit air temperature at AC louvers, and condensation rate (L/h).
-* **🧮 Empirical K-Factor Auto-Calibration ($HLC_{\text{empirical}}$)**: Exponential Moving Average (EMA) estimation of real-world room heat loss ($W/K$), deviation percentage from architectural specs, and insulation quality rating ("Отличная", "Хорошая", "Средняя", "Низкая").
-* **🪟 Natural Ventilation Heat Exchange ($P_{\text{vent}}$)**: Tracks heat influx or natural cooling loss when windows are opened for ventilation.
-* **⚡ Net Power Balance ($P_{\text{net}}$)**: Instantaneous thermodynamic power balance ($P_{\text{env}} - P_{\text{cooling}}$).
-* **⏱️ Temperature Forecast (Time to 1°C)**: Physics-based calculation of room thermal inertia predicting time to heat up (+1°C) or cool down (-1°C).
-* **📊 Energy & Cost Accumulators**: Tracks daily net balance, AC electricity cost, curtain shading savings, and continuous lifetime energy balance.
-* **📱 2-Column Responsive Lovelace Card**: Premium custom UI card (`custom:thermal-balance-card`) with CSS Container Queries (`@container`), live gauges, advice banners, cost intelligence cards, and 24h interactive ECharts trend graphs.
+* **❄️🔥 Year-Round HVAC Mode Support (Cooling & Heating / Heat Pump)**:
+  * Full thermodynamic support for **Cooling** ($P_{\text{net}} = P_{\text{gain}} - P_{\text{cooling}}$) and **Heating** ($P_{\text{net}} = P_{\text{gain}} + P_{\text{heating}}$).
+  * Selectable operation mode: `Cooling`, `Heating`, or `Auto` (automatically follows thermostat `climate.*` entity state or outdoor temperature delta).
+* **☀️ Astronomical Clear-Sky Solar Estimation & AOI Geometry**:
+  * **Physical solar sensor NOT required!** Built-in **Haurwitz Clear-Sky Model** and **Kasten-Czeplak Cloud Cover Attenuation** automatically compute solar radiation ($W/m^2$) based on sun elevation (`sun.sun`) and optional weather cloud coverage (`weather.*`).
+  * **Angle of Incidence (AOI)** geometry accurately calculates direct solar heat entry vs diffuse light based on window azimuth ($0^\circ \dots 360^\circ$).
+* **🧱 Dynamic $dT/dt$ Thermal Mass $K$-Factor Calibration**:
+  * Dynamic heat mass compensation ($P_{\text{steady}} = P_{\text{cooling}} - P_{\text{solar}} - C_{\text{total}} \cdot \frac{dT}{dt}$) filters out transient room cooldown/warmup slopes, preventing false building insulation degradation spikes.
+* **🎛️ Interactive Controls & Entities**:
+  * `select.thermal_balance_hvac_mode`: Switch between Cooling, Heating, and Auto.
+  * `select.thermal_balance_curtain_type`: Change window shading type on the fly (`roller_gaps`, `blackout`, `standard`, `blinds`, `external`).
+  * `button.thermal_balance_reset_daily`: Instant reset of daily kWh and cost counters.
+  * `button.thermal_balance_reset_k_factor`: Reset learned building insulation samples.
+  * `number.thermal_balance_electricity_rate`: Live electricity tariff adjustment (supports multi-tariff automations).
+* **💡 Smart Advice & Analytical Sensors**:
+  * `sensor.thermal_balance_equilibrium_temperature`: Passive room temperature without HVAC.
+  * `sensor.thermal_balance_required_ac_power`: Required HVAC thermal power to hold target 23°C.
+  * `binary_sensor.thermal_balance_recommend_open_window`: Triggers when outdoor air is cooler than room air, suggesting natural free cooling.
+  * `binary_sensor.thermal_balance_recommend_close_curtains`: Recommends shading during high solar exposure.
+  * `binary_sensor.thermal_balance_insufficient_cooling_capacity`: Alerts when thermal gain exceeds HVAC capacity.
+* **⚡ Official Home Assistant Actions (Services)**:
+  * `thermal_balance.reset_accumulators`: Immediately zero all accumulators.
+  * `thermal_balance.recalibrate_k_factor`: Clear calibration history.
+  * `thermal_balance.calculate_cooling_needs`: On-demand thermal analysis returning `ServiceResponse`.
+* **🧙‍♂️ 3-Step Wizard Config Flow & Gold Quality Reconfiguration**:
+  * Clean 3-step setup: **Step 1:** Room Geometry $\rightarrow$ **Step 2:** Equipment & Shading $\rightarrow$ **Step 3:** Sensors.
+  * Full **Home Assistant Gold Quality Scale `async_step_reconfigure`** support.
+* **📱 Premium Lovelace Dashboard Card (`custom:thermal-balance-card`)**:
+  * **🌐 Full i18n**: Automatic RU/EN language detection via `hass.locale.language`.
+  * **📱 Compact Mobile Mode (`compact: true`)**: Streamlined single-column layout for smartphones.
+  * **❄️🔥 Seasonal Theme Adaptation**: Cool cyan neon in cooling mode vs warm amber glow in heating mode.
+  * Interactive 24h ECharts trend graph and real-time SVG analog gauges.
 
 ---
 
-## 📖 Complete Documentation
+## 📖 Complete Documentation & Guide
 
-For detailed physics equations, configuration guide, card layout breakdown, and FAQ, read our [📖 GUIDE.md Documentation](GUIDE.md).
+For detailed physics equations, configuration walkthrough, full entity tables, card styling, and FAQ, read our [📖 GUIDE.md Documentation](GUIDE.md).
 
 ---
 
@@ -40,20 +56,35 @@ For detailed physics equations, configuration guide, card layout breakdown, and 
 
 ```
 custom_components/thermal_balance/
-├── __init__.py                # Integration setup & Lovelace resource registration
-├── config_flow.py             # UI Configuration & Options Flow
-├── const.py                   # Constants & sensor definitions
-├── coordinator.py             # Thermodynamic calculations & state coordinator
-├── sensor.py                  # Sensor entity definitions & state restoration
-├── thermal-balance-card.js    # Premium 2-column Lovelace dashboard card
-├── echarts.min.js             # Built-in ECharts graphing library
+├── __init__.py                # Integration setup, services & Lovelace resource registration
+├── config_flow.py             # 3-step Wizard Config, Options & Reconfigure Flow
+├── const.py                   # Constants, default coefficients & entity IDs
+├── coordinator.py             # Thermodynamic coordinator & event listener
+├── model.py                   # Pure thermodynamic & solar physics engine
+├── sensor.py                  # Analytical sensors & accumulators
+├── binary_sensor.py           # Smart recommendation & capacity binary sensors
+├── button.py                  # Daily accumulator & K-factor reset buttons
+├── number.py                  # Dynamic electricity tariff entity
+├── select.py                  # HVAC mode & curtain type select entities
+├── diagnostics.py             # Home Assistant Diagnostics dump support
+├── services.yaml              # Official Home Assistant action descriptions
+├── icons.json                 # Quality scale MDI icon localization
+├── thermal-balance-card.js    # Premium Lovelace card (i18n, compact view, themes)
+├── echarts.min.js             # Built-in ECharts graphing engine
 ├── manifest.json              # Integration manifest
-├── hacs.json                  # HACS configuration
-├── strings.json               # UI Translation strings (En/Ru)
-├── translations/
-│   ├── en.json                # English UI translations
-│   └── ru.json                # Russian UI translations
-└── brand/                     # HACS Brand icons & logos
+├── hacs.json                  # HACS repository configuration
+├── strings.json               # Localized UI schema strings
+└── translations/
+    ├── en.json                # English UI translations
+    └── ru.json                # Russian UI translations
+.github/workflows/
+└── test.yml                   # CI/CD automated test & HACS validation suite
+tests/
+├── mock_ha.py                 # Standalone Home Assistant test harness
+├── test_model.py              # Physics & clear-sky thermodynamic unit tests
+├── test_coordinator.py        # Coordinator, sunrise/sunset & action tests
+├── test_config_flow.py        # 3-step Config/Options/Reconfigure flow tests
+└── test_diagnostics.py        # Diagnostic dump tests
 ```
 
 ---
@@ -77,13 +108,13 @@ custom_components/thermal_balance/
 
 ## ⚙️ Setup & Configuration
 
-1. In Home Assistant, go to **Settings** $\rightarrow$ **Devices & Services** $\rightarrow$ **Add Integration**.
+1. In Home Assistant, navigate to **Settings** $\rightarrow$ **Devices & Services** $\rightarrow$ **Add Integration**.
 2. Search for **Thermal Balance**.
-3. Fill in room parameters (area $m^2$, ceiling height $m$, window area $m^2$, wall/window $U$-values).
-4. Select your sensors:
-   * **Required**: Indoor Temp, Outdoor Temp, Solar Radiation, AC Power.
-   * **Optional**: Indoor Humidity, Outdoor Humidity, AC Outlet Temp, Window Contact, **Indoor Illuminance (Lux) Sensor** (for auto-shading).
-5. Click **Submit**.
+3. Follow the 3-step setup wizard:
+   * **Step 1: Room Geometry & Architecture** (Floor area $m^2$, ceiling height $m$, glazing area $m^2$, wall & window $U$-values).
+   * **Step 2: Equipment & Shading** (Rated AC power $W$, airflow volume $m^3/h$, curtain type, electricity tariff).
+   * **Step 3: Sensors & Meteorological Inputs** (Required: Indoor Temp, Outdoor Temp, AC Power. Optional: Weather, Climate, Window contact, Lux sensor, Humidity).
+4. Click **Submit**.
 
 ---
 
@@ -93,9 +124,9 @@ Add the custom card to your dashboard:
 
 ```yaml
 type: custom:thermal-balance-card
+compact: true               # Set true for mobile dashboards
+title: "Bedroom Climate"    # Optional custom title
 ```
-
-The card automatically discovers your Thermal Balance sensors and renders an interactive 2-column layout on desktop and tablet devices.
 
 ---
 
