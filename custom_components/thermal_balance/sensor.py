@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTime
+from homeassistant.const import UnitOfEnergy, UnitOfPower, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -28,9 +28,11 @@ from .const import (
     SENSOR_AC_THERMAL_ENERGY_TOTAL,
     SENSOR_DAILY_THERMAL_BALANCE,
     SENSOR_EMPIRICAL_K_FACTOR,
+    SENSOR_EQUILIBRIUM_TEMPERATURE,
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_INSTANT_NET_BALANCE,
     SENSOR_NET_THERMAL_BALANCE,
+    SENSOR_REQUIRED_AC_POWER,
     SENSOR_SHADING_DAILY_SAVINGS,
     SENSOR_TIME_TO_1DEG,
     SENSOR_TOTAL_HEAT_ABSORBED,
@@ -142,6 +144,22 @@ SENSOR_TYPES: tuple[ThermalBalanceSensorEntityDescription, ...] = (
         suggested_display_precision=2,
     ),
     ThermalBalanceSensorEntityDescription(
+        key=SENSOR_EQUILIBRIUM_TEMPERATURE,
+        name="Equilibrium Temperature",
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+    ),
+    ThermalBalanceSensorEntityDescription(
+        key=SENSOR_REQUIRED_AC_POWER,
+        name="Required AC Power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
+    ),
+    ThermalBalanceSensorEntityDescription(
         key=SENSOR_AC_ENERGY_COST,
         name="AC Energy Cost",
         native_unit_of_measurement=None,
@@ -213,6 +231,13 @@ class ThermalBalanceSensor(CoordinatorEntity[ThermalBalanceCoordinator], Restore
     def native_value(self) -> float | None:
         """Return native value of sensor."""
         return self.coordinator.data.get(self.entity_description.key)
+
+    @property
+    def icon(self) -> str | None:
+        """Return dynamic icon based on sensor state and mode."""
+        if self.entity_description.key == SENSOR_AC_HEAT_OUTPUT:
+            return "mdi:fire" if self.coordinator.is_heating else "mdi:snowflake"
+        return super().icon
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

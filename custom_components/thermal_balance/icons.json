@@ -1,0 +1,54 @@
+{
+  "entity": {
+    "select": {
+      "hvac_mode": {
+        "default": "mdi:hvac",
+        "state": {
+          "cooling": "mdi:snowflake",
+          "heating": "mdi:fire",
+          "auto": "mdi:thermostat-auto"
+        }
+      },
+      "curtain_type": {
+        "default": "mdi:curtains"
+      }
+    },
+    "button": {
+      "reset_daily": {
+        "default": "mdi:calendar-refresh"
+      },
+      "reset_k_factor": {
+        "default": "mdi:restart"
+      }
+    },
+    "number": {
+      "electricity_rate": {
+        "default": "mdi:cash-multiple"
+      }
+    },
+    "sensor": {
+      "equilibrium_temperature": {
+        "default": "mdi:thermometer-water"
+      },
+      "required_ac_power": {
+        "default": "mdi:lightning-bolt"
+      }
+    },
+    "binary_sensor": {
+      "insufficient_cooling_capacity": {
+        "default": "mdi:alert-circle-outline"
+      }
+    }
+  },
+  "services": {
+    "reset_accumulators": {
+      "service": "mdi:restore"
+    },
+    "recalibrate_k_factor": {
+      "service": "mdi:restart"
+    },
+    "calculate_cooling_needs": {
+      "service": "mdi:calculator-variant"
+    }
+  }
+}

@@ -2,61 +2,154 @@
   "config": {
     "step": {
       "user": {
-        "title": "Thermal Balance Setup",
-        "description": "Configure room parameters and select input sensors.",
+        "title": "Thermal Balance — Step 1: Room Geometry & Insulation",
+        "description": "Configure room dimensions, window glazing, orientation, and building insulation.",
         "data": {
-          "room_area": "Room Area",
-          "ceiling_height": "Ceiling Height",
-          "window_area": "Window Glazing Area",
+          "room_area": "Room Floor Area (m²)",
+          "ceiling_height": "Ceiling Height (m)",
+          "window_area": "Window Glazing Area (m²)",
           "external_walls_fraction": "External Walls Fraction",
-          "ac_max_cooling": "Max AC Cooling Capacity",
-          "ac_airflow": "AC Airflow Volume",
-          "u_wall": "Wall U-value",
-          "u_window": "Window U-value",
-          "use_empirical_hlc": "Auto-calibrate K-Factor (Measured)",
-          "sensor_t_in": "Indoor Temperature",
-          "sensor_t_out": "Outdoor Temperature",
-          "sensor_t_ac_exit": "AC Outlet Air Temperature",
-          "sensor_rh_in": "Indoor Humidity",
-          "sensor_rh_out": "Outdoor Humidity",
-          "sensor_solar": "Solar Radiation",
-          "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
-          "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
-          "electricity_rate": "Electricity Rate per kWh",
-          "currency_symbol": "Currency Symbol",
-          "sensor_ac_power": "AC Power Consumption",
-          "sensor_window": "Window State",
-          "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
-          "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
-          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)",
-          "curtain_type": "Curtain / Shading Type"
+          "window_azimuth": "Window Facing Azimuth (0°=N, 90°=E, 180°=S, 270°=W)",
+          "u_wall": "Wall Thermal Transmittance U (W/m²·K)",
+          "u_window": "Window Thermal Transmittance U (W/m²·K)",
+          "use_empirical_hlc": "Auto-calibrate K-Factor (Empirical Measurement)"
         },
         "data_description": {
-          "room_area": "Floor area of the room in m²",
-          "ceiling_height": "Height of the ceiling in meters",
-          "window_area": "Total glazing area facing outside in m²",
-          "external_walls_fraction": "How many walls face outside (0.25 = 1 of 4, 0.50 = 2 of 4, etc.)",
-          "ac_max_cooling": "Maximum cooling output of your AC unit in Watts (from spec sheet)",
-          "ac_airflow": "Airflow volume of the indoor AC unit in m³/h (from spec sheet)",
-          "u_wall": "Wall thermal transmittance W/(m²·K) — lower = better insulated",
-          "u_window": "Window thermal transmittance W/(m²·K) — lower = better insulated",
-          "use_empirical_hlc": "Enable to automatically use real-world measured room K-factor heat loss instead of theoretical estimates.",
-          "sensor_t_in": "Sensor providing indoor air temperature in °C",
-          "sensor_t_out": "Sensor providing outdoor air temperature in °C",
-          "sensor_t_ac_exit": "Sensor or input_number with measured air temperature at AC louver outlet in °C (optional)",
-          "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
-          "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
-          "sensor_solar": "Sensor providing solar irradiance in W/m²",
-          "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
-          "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
-          "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
-          "sensor_window": "Binary sensor indicating window open/closed state (optional)",
-          "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
-          "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
-          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)",
-          "curtain_type": "Select type of window shading installed (Blackout curtains block ~93% solar heat gain)"
+          "room_area": "Total usable floor area of the room in square meters (m²).",
+          "ceiling_height": "Vertical height from floor to ceiling in meters.",
+          "window_area": "Total area of all outdoor-facing window glass in square meters (m²).",
+          "external_walls_fraction": "Proportion of room perimeter facing outside (0.25 = 1 wall, 0.50 = corner room, 1.00 = detached building).",
+          "window_azimuth": "Compass direction the primary windows face (0°=North, 90°=East, 180°=South, 270°=West).",
+          "u_wall": "Wall heat transfer coefficient (lower means better insulation, e.g. 0.20-0.35 W/m²·K).",
+          "u_window": "Window glazing heat transfer coefficient (e.g. 1.1 W/m²·K for double-glazed low-e windows).",
+          "use_empirical_hlc": "Enable dynamic learning of real-world room heat loss coefficient based on live thermal response."
+        }
+      },
+      "equipment": {
+        "title": "Thermal Balance — Step 2: Equipment, Shading & Tariffs",
+        "description": "Configure AC / heat pump specifications, window shading type, and electricity pricing.",
+        "data": {
+          "hvac_mode": "Default HVAC Operation Mode",
+          "ac_max_cooling": "Max AC Rated Output Capacity (W)",
+          "ac_airflow": "Indoor Unit Airflow Volume (m³/h)",
+          "curtain_type": "Window Shading / Curtain Type",
+          "electricity_rate": "Electricity Tariff (per kWh)",
+          "currency_symbol": "Currency Symbol ($, €, ₴, £)",
+          "illuminance_threshold": "Curtain Auto-Detection Lux Threshold (lx)"
+        },
+        "data_description": {
+          "hvac_mode": "Primary operational mode: Cooling (summer), Heating (winter heat pump), or Auto (follows thermostat/temperature delta).",
+          "ac_max_cooling": "Maximum thermal cooling/heating capacity of the AC unit in Watts (from manufacturer datasheet, e.g. 3350 W).",
+          "ac_airflow": "Volumetric airflow rate of the indoor AC blower in m³/h (e.g. 370 m³/h).",
+          "curtain_type": "Installed window covering type (Blackout curtains block ~93% solar heat gain, Roller blinds ~74%).",
+          "electricity_rate": "Price per kWh of electrical energy to calculate running costs and shading financial savings.",
+          "currency_symbol": "Currency symbol to display on cost and savings sensors (e.g. $, €, ₴, £).",
+          "illuminance_threshold": "Indoor illuminance level below which curtains are considered closed during daylight hours (default 150 lx)."
+        }
+      },
+      "sensors": {
+        "title": "Thermal Balance — Step 3: Sensors & Meteorological Inputs",
+        "description": "Map physical room temperature sensors and optional environmental entities.",
+        "data": {
+          "sensor_t_in": "Indoor Air Temperature Sensor (Required)",
+          "sensor_t_out": "Outdoor Air Temperature Sensor (Required)",
+          "sensor_ac_power": "AC Electrical Power Consumption Sensor (Required)",
+          "sensor_climate": "Climate / Thermostat Entity (climate.*, Optional)",
+          "sensor_solar": "Solar Irradiance Sensor (W/m², Optional — Auto-Calculated if empty)",
+          "sensor_weather": "Weather Entity (weather.*, Optional — for Cloud Cover)",
+          "sensor_window": "Window Contact Sensor (binary_sensor.*, Optional)",
+          "sensor_illuminance": "Indoor Illuminance Sensor (lux, Optional)",
+          "sensor_t_ac_exit": "AC Louver Outlet Air Temperature Sensor (Optional)",
+          "sensor_rh_in": "Indoor Relative Humidity Sensor (%, Optional)",
+          "sensor_rh_out": "Outdoor Relative Humidity Sensor (%, Optional)",
+          "sensor_wind_speed": "Wind Speed Sensor (m/s, Optional)",
+          "sensor_wind_direction": "Wind Direction Sensor (degrees, Optional)"
+        },
+        "data_description": {
+          "sensor_t_in": "Sensor providing real-time room indoor air temperature in °C.",
+          "sensor_t_out": "Sensor providing outdoor ambient air temperature in °C.",
+          "sensor_ac_power": "Power meter sensor measuring real-time electrical wattage consumed by the AC unit (in Watts).",
+          "sensor_climate": "Climate entity to automatically follow active heating/cooling state in Auto mode.",
+          "sensor_solar": "Pyranometer sensor measuring global solar radiation in W/m² (optional: if omitted, Clear-Sky model calculates it).",
+          "sensor_weather": "Weather provider entity to factor cloud coverage into solar irradiance calculations.",
+          "sensor_window": "Binary sensor detecting open/closed window state for natural ventilation airflow calculations.",
+          "sensor_illuminance": "Indoor light sensor used to automatically detect when window curtains are drawn during daylight.",
+          "sensor_t_ac_exit": "Temperature sensor placed at the indoor unit supply air louver to measure direct AC heat extraction.",
+          "sensor_rh_in": "Indoor humidity sensor used for enthalpy, dew point, and condensate moisture calculations.",
+          "sensor_rh_out": "Outdoor relative humidity sensor used for psychrometric calculations.",
+          "sensor_wind_speed": "Anemometer sensor providing outdoor wind speed for stack and wind pressure ventilation calculations.",
+          "sensor_wind_direction": "Wind vane sensor providing compass direction (0-360°) to calculate direct wind pressure on windows."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure — Step 1: Room Geometry & Insulation",
+        "description": "Update room dimensions, window glazing, orientation, and building insulation.",
+        "data": {
+          "room_area": "Room Floor Area (m²)",
+          "ceiling_height": "Ceiling Height (m)",
+          "window_area": "Window Glazing Area (m²)",
+          "external_walls_fraction": "External Walls Fraction",
+          "window_azimuth": "Window Facing Azimuth (0°=N, 90°=E, 180°=S, 270°=W)",
+          "u_wall": "Wall Thermal Transmittance U (W/m²·K)",
+          "u_window": "Window Thermal Transmittance U (W/m²·K)",
+          "use_empirical_hlc": "Auto-calibrate K-Factor (Empirical Measurement)",
+          "hvac_mode": "Default HVAC Operation Mode",
+          "ac_max_cooling": "Max AC Rated Output Capacity (W)",
+          "ac_airflow": "Indoor Unit Airflow Volume (m³/h)",
+          "curtain_type": "Window Shading / Curtain Type",
+          "electricity_rate": "Electricity Tariff (per kWh)",
+          "currency_symbol": "Currency Symbol ($, €, ₴, £)",
+          "illuminance_threshold": "Curtain Auto-Detection Lux Threshold (lx)",
+          "sensor_t_in": "Indoor Air Temperature Sensor (Required)",
+          "sensor_t_out": "Outdoor Air Temperature Sensor (Required)",
+          "sensor_ac_power": "AC Electrical Power Consumption Sensor (Required)",
+          "sensor_climate": "Climate / Thermostat Entity (climate.*, Optional)",
+          "sensor_solar": "Solar Irradiance Sensor (W/m², Optional — Auto-Calculated if empty)",
+          "sensor_weather": "Weather Entity (weather.*, Optional — for Cloud Cover)",
+          "sensor_window": "Window Contact Sensor (binary_sensor.*, Optional)",
+          "sensor_illuminance": "Indoor Illuminance Sensor (lux, Optional)",
+          "sensor_t_ac_exit": "AC Louver Outlet Air Temperature Sensor (Optional)",
+          "sensor_rh_in": "Indoor Relative Humidity Sensor (%, Optional)",
+          "sensor_rh_out": "Outdoor Relative Humidity Sensor (%, Optional)",
+          "sensor_wind_speed": "Wind Speed Sensor (m/s, Optional)",
+          "sensor_wind_direction": "Wind Direction Sensor (degrees, Optional)"
+        }
+      },
+      "reconfigure_equipment": {
+        "title": "Reconfigure — Step 2: Equipment, Shading & Tariffs",
+        "description": "Update AC / heat pump specifications, window shading type, and electricity pricing.",
+        "data": {
+          "hvac_mode": "Default HVAC Operation Mode",
+          "ac_max_cooling": "Max AC Rated Output Capacity (W)",
+          "ac_airflow": "Indoor Unit Airflow Volume (m³/h)",
+          "curtain_type": "Window Shading / Curtain Type",
+          "electricity_rate": "Electricity Tariff (per kWh)",
+          "currency_symbol": "Currency Symbol ($, €, ₴, £)",
+          "illuminance_threshold": "Curtain Auto-Detection Lux Threshold (lx)"
+        }
+      },
+      "reconfigure_sensors": {
+        "title": "Reconfigure — Step 3: Sensors & Meteorological Inputs",
+        "description": "Update room temperature sensors and optional environmental entities.",
+        "data": {
+          "sensor_t_in": "Indoor Air Temperature Sensor (Required)",
+          "sensor_t_out": "Outdoor Air Temperature Sensor (Required)",
+          "sensor_ac_power": "AC Electrical Power Consumption Sensor (Required)",
+          "sensor_climate": "Climate / Thermostat Entity (climate.*, Optional)",
+          "sensor_solar": "Solar Irradiance Sensor (W/m², Optional — Auto-Calculated if empty)",
+          "sensor_weather": "Weather Entity (weather.*, Optional — for Cloud Cover)",
+          "sensor_window": "Window Contact Sensor (binary_sensor.*, Optional)",
+          "sensor_illuminance": "Indoor Illuminance Sensor (lux, Optional)",
+          "sensor_t_ac_exit": "AC Louver Outlet Air Temperature Sensor (Optional)",
+          "sensor_rh_in": "Indoor Relative Humidity Sensor (%, Optional)",
+          "sensor_rh_out": "Outdoor Relative Humidity Sensor (%, Optional)",
+          "sensor_wind_speed": "Wind Speed Sensor (m/s, Optional)",
+          "sensor_wind_direction": "Wind Direction Sensor (degrees, Optional)"
         }
       }
+    },
+    "abort": {
+      "reconfigure_successful": "Reconfiguration was successful."
     },
     "error": {
       "invalid_sensor": "Selected entity is invalid or does not exist."
@@ -65,59 +158,167 @@
   "options": {
     "step": {
       "init": {
-        "title": "Thermal Balance Options",
-        "description": "Update room parameters and sensor mappings.",
+        "title": "Thermal Balance Options — Step 1: Room Geometry & Insulation",
+        "description": "Update room architecture, dimensions, and building insulation.",
         "data": {
-          "room_area": "Room Area",
-          "ceiling_height": "Ceiling Height",
-          "window_area": "Window Glazing Area",
+          "room_area": "Room Floor Area (m²)",
+          "ceiling_height": "Ceiling Height (m)",
+          "window_area": "Window Glazing Area (m²)",
           "external_walls_fraction": "External Walls Fraction",
-          "ac_max_cooling": "Max AC Cooling Capacity",
-          "ac_airflow": "AC Airflow Volume",
-          "u_wall": "Wall U-value",
-          "u_window": "Window U-value",
-          "use_empirical_hlc": "Auto-calibrate K-Factor (Measured)",
-          "sensor_t_in": "Indoor Temperature",
-          "sensor_t_out": "Outdoor Temperature",
-          "sensor_t_ac_exit": "AC Outlet Air Temperature",
-          "sensor_rh_in": "Indoor Humidity",
-          "sensor_rh_out": "Outdoor Humidity",
-          "sensor_solar": "Solar Radiation",
-          "sensor_illuminance": "Indoor Illuminance Sensor (for auto-shading)",
-          "illuminance_threshold": "Curtain Shading Lux Threshold (lx)",
-          "sensor_ac_power": "AC Power Consumption",
-          "sensor_window": "Window State",
-          "sensor_wind_speed": "Wind Speed Sensor (Meteorology)",
-          "sensor_wind_direction": "Wind Direction Sensor (Meteorology)",
-          "window_azimuth": "Window Azimuth (0=North, 90=East, 180=South, 270=West)",
-          "curtain_type": "Curtain / Shading Type"
+          "window_azimuth": "Window Facing Azimuth (0°=N, 90°=E, 180°=S, 270°=W)",
+          "u_wall": "Wall Thermal Transmittance U (W/m²·K)",
+          "u_window": "Window Thermal Transmittance U (W/m²·K)",
+          "use_empirical_hlc": "Auto-calibrate K-Factor (Empirical Measurement)",
+          "hvac_mode": "Default HVAC Operation Mode",
+          "ac_max_cooling": "Max AC Rated Output Capacity (W)",
+          "ac_airflow": "Indoor Unit Airflow Volume (m³/h)",
+          "curtain_type": "Window Shading / Curtain Type",
+          "electricity_rate": "Electricity Tariff (per kWh)",
+          "currency_symbol": "Currency Symbol ($, €, ₴, £)",
+          "illuminance_threshold": "Curtain Auto-Detection Lux Threshold (lx)",
+          "sensor_t_in": "Indoor Air Temperature Sensor (Required)",
+          "sensor_t_out": "Outdoor Air Temperature Sensor (Required)",
+          "sensor_ac_power": "AC Electrical Power Consumption Sensor (Required)",
+          "sensor_climate": "Climate / Thermostat Entity (climate.*, Optional)",
+          "sensor_solar": "Solar Irradiance Sensor (W/m², Optional — Auto-Calculated if empty)",
+          "sensor_weather": "Weather Entity (weather.*, Optional — for Cloud Cover)",
+          "sensor_window": "Window Contact Sensor (binary_sensor.*, Optional)",
+          "sensor_illuminance": "Indoor Illuminance Sensor (lux, Optional)",
+          "sensor_t_ac_exit": "AC Louver Outlet Air Temperature Sensor (Optional)",
+          "sensor_rh_in": "Indoor Relative Humidity Sensor (%, Optional)",
+          "sensor_rh_out": "Outdoor Relative Humidity Sensor (%, Optional)",
+          "sensor_wind_speed": "Wind Speed Sensor (m/s, Optional)",
+          "sensor_wind_direction": "Wind Direction Sensor (degrees, Optional)"
         },
         "data_description": {
-          "room_area": "Floor area of the room in m²",
-          "ceiling_height": "Height of the ceiling in meters",
-          "window_area": "Total glazing area facing outside in m²",
-          "external_walls_fraction": "How many walls face outside (0.25 = 1 of 4, 0.50 = 2 of 4, etc.)",
-          "ac_max_cooling": "Maximum cooling output of your AC unit in Watts (from spec sheet)",
-          "ac_airflow": "Airflow volume of the indoor AC unit in m³/h (from spec sheet)",
-          "u_wall": "Wall thermal transmittance W/(m²·K) — lower = better insulated",
-          "u_window": "Window thermal transmittance W/(m²·K) — lower = better insulated",
-          "use_empirical_hlc": "Enable to automatically use real-world measured room K-factor heat loss instead of theoretical estimates.",
-          "sensor_t_in": "Sensor providing indoor air temperature in °C",
-          "sensor_t_out": "Sensor providing outdoor air temperature in °C",
-          "sensor_t_ac_exit": "Sensor or input_number with measured air temperature at AC louver outlet in °C (optional)",
-          "sensor_rh_in": "Sensor providing indoor relative humidity in % (optional)",
-          "sensor_rh_out": "Sensor providing outdoor relative humidity in % (optional)",
-          "sensor_solar": "Sensor providing solar irradiance in W/m²",
-          "sensor_illuminance": "Indoor illuminance lux sensor used to auto-detect curtain shading (optional)",
-          "illuminance_threshold": "Lux threshold below which curtains are considered closed (default 150 lx)",
-          "sensor_ac_power": "Sensor providing real-time AC electrical power consumption in W",
-          "sensor_window": "Binary sensor indicating window open/closed state (optional)",
-          "sensor_wind_speed": "Sensor providing wind speed in m/s or km/h (optional)",
-          "sensor_wind_direction": "Sensor providing wind direction in degrees 0-360 (optional)",
-          "window_azimuth": "Azimuth angle the window faces to calculate direct wind impact (0=N, 90=E, 180=S, 270=W)",
-          "curtain_type": "Select type of window shading installed (Blackout curtains block ~93% solar heat gain)"
+          "room_area": "Total usable floor area of the room in square meters (m²).",
+          "ceiling_height": "Vertical height from floor to ceiling in meters.",
+          "window_area": "Total area of all outdoor-facing window glass in square meters (m²).",
+          "external_walls_fraction": "Proportion of room perimeter facing outside (0.25 = 1 wall, 0.50 = corner room, 1.00 = detached building).",
+          "window_azimuth": "Compass direction the primary windows face (0°=North, 90°=East, 180°=South, 270°=West).",
+          "u_wall": "Wall heat transfer coefficient (lower means better insulation, e.g. 0.20-0.35 W/m²·K).",
+          "u_window": "Window glazing heat transfer coefficient (e.g. 1.1 W/m²·K for double-glazed low-e windows).",
+          "use_empirical_hlc": "Enable dynamic learning of real-world room heat loss coefficient based on live thermal response."
+        }
+      },
+      "equipment": {
+        "title": "Thermal Balance Options — Step 2: Equipment, Shading & Tariffs",
+        "description": "Update AC / heat pump specifications, window shading type, and electricity pricing.",
+        "data": {
+          "hvac_mode": "Default HVAC Operation Mode",
+          "ac_max_cooling": "Max AC Rated Output Capacity (W)",
+          "ac_airflow": "Indoor Unit Airflow Volume (m³/h)",
+          "curtain_type": "Window Shading / Curtain Type",
+          "electricity_rate": "Electricity Tariff (per kWh)",
+          "currency_symbol": "Currency Symbol ($, €, ₴, £)",
+          "illuminance_threshold": "Curtain Auto-Detection Lux Threshold (lx)"
+        },
+        "data_description": {
+          "hvac_mode": "Primary operational mode: Cooling (summer), Heating (winter heat pump), or Auto (follows thermostat/temperature delta).",
+          "ac_max_cooling": "Maximum thermal cooling/heating capacity of the AC unit in Watts (from manufacturer datasheet, e.g. 3350 W).",
+          "ac_airflow": "Volumetric airflow rate of the indoor AC blower in m³/h (e.g. 370 m³/h).",
+          "curtain_type": "Installed window covering type (Blackout curtains block ~93% solar heat gain, Roller blinds ~74%).",
+          "electricity_rate": "Price per kWh of electrical energy to calculate running costs and shading financial savings.",
+          "currency_symbol": "Currency symbol to display on cost and savings sensors (e.g. $, €, ₴, £).",
+          "illuminance_threshold": "Indoor illuminance level below which curtains are considered closed during daylight hours (default 150 lx)."
+        }
+      },
+      "sensors": {
+        "title": "Thermal Balance Options — Step 3: Sensors & Meteorological Inputs",
+        "description": "Update room temperature sensors and optional environmental entities.",
+        "data": {
+          "sensor_t_in": "Indoor Air Temperature Sensor (Required)",
+          "sensor_t_out": "Outdoor Air Temperature Sensor (Required)",
+          "sensor_ac_power": "AC Electrical Power Consumption Sensor (Required)",
+          "sensor_climate": "Climate / Thermostat Entity (climate.*, Optional)",
+          "sensor_solar": "Solar Irradiance Sensor (W/m², Optional — Auto-Calculated if empty)",
+          "sensor_weather": "Weather Entity (weather.*, Optional — for Cloud Cover)",
+          "sensor_window": "Window Contact Sensor (binary_sensor.*, Optional)",
+          "sensor_illuminance": "Indoor Illuminance Sensor (lux, Optional)",
+          "sensor_t_ac_exit": "AC Louver Outlet Air Temperature Sensor (Optional)",
+          "sensor_rh_in": "Indoor Relative Humidity Sensor (%, Optional)",
+          "sensor_rh_out": "Outdoor Relative Humidity Sensor (%, Optional)",
+          "sensor_wind_speed": "Wind Speed Sensor (m/s, Optional)",
+          "sensor_wind_direction": "Wind Direction Sensor (degrees, Optional)"
+        },
+        "data_description": {
+          "sensor_t_in": "Sensor providing real-time room indoor air temperature in °C.",
+          "sensor_t_out": "Sensor providing outdoor ambient air temperature in °C.",
+          "sensor_ac_power": "Power meter sensor measuring real-time electrical wattage consumed by the AC unit (in Watts).",
+          "sensor_climate": "Climate entity to automatically follow active heating/cooling state in Auto mode.",
+          "sensor_solar": "Pyranometer sensor measuring global solar radiation in W/m² (optional: if omitted, Clear-Sky model calculates it).",
+          "sensor_weather": "Weather provider entity to factor cloud coverage into solar irradiance calculations.",
+          "sensor_window": "Binary sensor detecting open/closed window state for natural ventilation airflow calculations.",
+          "sensor_illuminance": "Indoor light sensor used to automatically detect when window curtains are drawn during daylight.",
+          "sensor_t_ac_exit": "Temperature sensor placed at the indoor unit supply air louver to measure direct AC heat extraction.",
+          "sensor_rh_in": "Indoor humidity sensor used for enthalpy, dew point, and condensate moisture calculations.",
+          "sensor_rh_out": "Outdoor relative humidity sensor used for psychrometric calculations.",
+          "sensor_wind_speed": "Anemometer sensor providing outdoor wind speed for stack and wind pressure ventilation calculations.",
+          "sensor_wind_direction": "Wind vane sensor providing compass direction (0-360°) to calculate direct wind pressure on windows."
         }
       }
+    }
+  },
+  "entity": {
+    "select": {
+      "hvac_mode": {
+        "name": "HVAC Mode",
+        "state": {
+          "cooling": "Cooling",
+          "heating": "Heating",
+          "auto": "Auto"
+        }
+      },
+      "curtain_type": {
+        "name": "Curtain Type",
+        "state": {
+          "roller_gaps": "Roller Blinds (Gaps)",
+          "blackout": "Blackout Curtains",
+          "standard": "Standard Fabric Curtains",
+          "blinds": "Venetian Blinds",
+          "external": "External Shutters / Jalousie"
+        }
+      }
+    },
+    "button": {
+      "reset_daily": {
+        "name": "Reset Daily Counters"
+      },
+      "reset_k_factor": {
+        "name": "Reset K-Factor Calibration"
+      }
+    },
+    "number": {
+      "electricity_rate": {
+        "name": "Electricity Rate"
+      }
+    },
+    "sensor": {
+      "equilibrium_temperature": {
+        "name": "Equilibrium Temperature"
+      },
+      "required_ac_power": {
+        "name": "Required AC Power"
+      }
+    },
+    "binary_sensor": {
+      "insufficient_cooling_capacity": {
+        "name": "Insufficient HVAC Capacity"
+      }
+    }
+  },
+  "services": {
+    "reset_accumulators": {
+      "name": "Reset Accumulators",
+      "description": "Immediately reset daily and total energy and financial accumulators."
+    },
+    "recalibrate_k_factor": {
+      "name": "Recalibrate K-Factor",
+      "description": "Clear empirical K-factor historical learning samples to retrain building insulation calibration."
+    },
+    "calculate_cooling_needs": {
+      "name": "Calculate Cooling Needs",
+      "description": "Calculate thermal power needs, equilibrium temperature, and estimated electrical consumption."
     }
   }
 }

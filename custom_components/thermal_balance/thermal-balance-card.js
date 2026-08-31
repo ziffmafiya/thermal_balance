@@ -6,6 +6,125 @@
  * Editor registered as: thermal-balance-card-editor
  */
 
+const TRANSLATIONS = {
+  en: {
+    title: 'Thermal Balance',
+    editor_title: 'Thermal Balance Configuration',
+    compact_view: 'Compact Mode (Mobile)',
+    card_title_label: 'Custom Card Title (Optional)',
+    heat_gain_sensor: 'Heat Gain Sensor',
+    ac_cooling_sensor: 'AC Cooling / Heating Sensor',
+    net_balance_sensor: 'Net Balance Sensor',
+    ac_cop_sensor: 'AC COP Sensor',
+    time_to_1c_sensor: 'Time to 1°C Sensor',
+    daily_balance_sensor: 'Daily Balance Sensor',
+    total_balance_sensor: 'Total Balance Sensor',
+    heat_absorbed_sensor: 'Heat Absorbed Sensor',
+    ac_energy_sensor: 'AC Thermal Energy Sensor',
+    condensation_rate_sensor: 'Condensation Rate Sensor',
+    heat_mode: 'Heat Mode',
+    cool_mode: 'Cool Mode',
+    stable: 'Stable',
+    heat_gain: 'Heat Gain',
+    heat_loss: 'Heat Loss',
+    ac_cooling: 'AC Cooling',
+    ac_heating: 'AC Heating',
+    net_balance: 'Net Balance',
+    ventilation: 'Ventilation',
+    to_1c: 'To 1°C',
+    condensation: 'Condensation',
+    vent_heat_exchange: 'Ventilation & Heat Exchange',
+    window: 'Window',
+    window_open: 'Open',
+    window_closed: 'Closed',
+    wind: 'Wind',
+    air_change: 'Air Change (ACH)',
+    curtains: 'Curtains',
+    curtains_closed: 'Closed',
+    curtains_open: 'Open',
+    solar: 'Solar',
+    walls: 'Walls',
+    k_factor_actual: 'K-Factor (Actual)',
+    insulation: 'Insulation',
+    estimated: 'Estimated',
+    window_open_k_note: 'Window is open — K-factor is unreliable',
+    ac_cooling_perf: 'AC Cooling Performance',
+    heating_perf: 'Heating Performance (Heat Pump)',
+    trend_24h: '24h Thermal Trend',
+    heat: 'Heat',
+    cooling: 'Cooling',
+    heating: 'Heating',
+    net: 'Net',
+    energy_cost_intel: 'Energy & Cost Intelligence',
+    daily_balance: 'Daily Balance',
+    total_balance: 'Total Balance',
+    heat_absorbed: 'Heat Absorbed',
+    ac_energy: 'AC Energy',
+    ac_cost: 'AC Cost',
+    shading_savings: 'Shading Savings',
+    open_win_rec: 'Open Window Recommended! Outdoor air is cooler than indoor. Open window for free cooling!',
+    close_cur_rec: 'Close Curtains Recommended! High solar radiation. Close curtains to reduce heat gain & save energy.',
+  },
+  ru: {
+    title: 'Thermal Balance',
+    editor_title: 'Настройки Thermal Balance',
+    compact_view: 'Компактный режим (для смартфонов)',
+    card_title_label: 'Свой заголовок карточки (опционально)',
+    heat_gain_sensor: 'Сенсор притока тепла (Heat Gain)',
+    ac_cooling_sensor: 'Сенсор отдачи AC (Cooling/Heating)',
+    net_balance_sensor: 'Сенсор чистого баланса (Net Balance)',
+    ac_cop_sensor: 'Сенсор эффективности AC (COP)',
+    time_to_1c_sensor: 'Сенсор времени до ±1°C',
+    daily_balance_sensor: 'Сенсор суточного баланса',
+    total_balance_sensor: 'Сенсор общего баланса',
+    heat_absorbed_sensor: 'Сенсор поглощенного тепла',
+    ac_energy_sensor: 'Сенсор тепловой энергии AC',
+    condensation_rate_sensor: 'Сенсор конденсата AC',
+    heat_mode: 'Режим Обогрева',
+    cool_mode: 'Режим Охлаждения',
+    stable: 'Баланс',
+    heat_gain: 'Приток тепла',
+    heat_loss: 'Теплопотери',
+    ac_cooling: 'Охлаждение AC',
+    ac_heating: 'Теплоотдача AC',
+    net_balance: 'Чистый баланс',
+    ventilation: 'Проветривание',
+    to_1c: 'До ±1°C',
+    condensation: 'Конденсат',
+    vent_heat_exchange: 'Вентиляция и теплообмен',
+    window: 'Окно',
+    window_open: 'Открыто',
+    window_closed: 'Закрыто',
+    wind: 'Ветер',
+    air_change: 'Кратность (ACH)',
+    curtains: 'Шторы',
+    curtains_closed: 'Закрыты',
+    curtains_open: 'Открыты',
+    solar: 'Солнце',
+    walls: 'Стены',
+    k_factor_actual: 'K-фактор (факт)',
+    insulation: 'Изоляция',
+    estimated: 'Расчетный',
+    window_open_k_note: 'Окно открыто — K-фактор недостоверен',
+    ac_cooling_perf: 'Характеристики охлаждения AC',
+    heating_perf: 'Характеристики обогрева (ТН)',
+    trend_24h: 'Суточный тренд баланса',
+    heat: 'Приток',
+    cooling: 'Холод',
+    heating: 'Нагрев',
+    net: 'Баланс',
+    energy_cost_intel: 'Энергетические и финансовые счетчики',
+    daily_balance: 'Суточный баланс',
+    total_balance: 'Общий баланс',
+    heat_absorbed: 'Поглощено тепла',
+    ac_energy: 'Тепловая энергия AC',
+    ac_cost: 'Затраты за день',
+    shading_savings: 'Экономия от штор',
+    open_win_rec: 'Рекомендуется открыть окно! На улице прохладнее, чем в комнате — используйте бесплатное охлаждение.',
+    close_cur_rec: 'Рекомендуется закрыть шторы! Высокая солнечная радиация — зашторьте окна для экономии энергии.',
+  }
+};
+
 const SENSOR_MAP = {
   heat_gain: ['_instant_heat_gain', '_heat_gain', '_solar_heat_gain'],
   ac_cooling: ['_ac_heat_output', '_ac_cooling', '_heat_output'],
@@ -89,13 +208,19 @@ class ThermalBalanceCardEditor extends HTMLElement {
     this.render();
   }
 
+  _t(key, defaultText = '') {
+    const lang = (this._hass && (this._hass.locale?.language || this._hass.language)) || 'en';
+    const langCode = lang.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    return (TRANSLATIONS[langCode] && TRANSLATIONS[langCode][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || defaultText || key;
+  }
+
   _valueChanged(ev) {
     if (!this._config) return;
     const target = ev.target;
     const configKey = target.getAttribute('configValue');
     if (!configKey) return;
 
-    const newValue = ev.detail ? ev.detail.value : target.value;
+    let newValue = ev.detail ? ev.detail.value : (target.type === 'checkbox' ? target.checked : target.value);
     if (this._config[configKey] === newValue) return;
 
     const newConfig = { ...this._config };
@@ -117,16 +242,16 @@ class ThermalBalanceCardEditor extends HTMLElement {
   render() {
     const auto = autoDiscoverEntities(this._hass);
     const fields = [
-      { key: 'heat_gain', label: 'Heat Gain Sensor' },
-      { key: 'ac_cooling', label: 'AC Cooling Sensor' },
-      { key: 'net_balance', label: 'Net Balance Sensor' },
-      { key: 'ac_cop', label: 'AC COP Sensor' },
-      { key: 'time_to_1c', label: 'Time to 1°C Sensor' },
-      { key: 'daily_balance', label: 'Daily Balance Sensor' },
-      { key: 'total_balance', label: 'Total Balance Sensor' },
-      { key: 'heat_absorbed', label: 'Heat Absorbed Sensor' },
-      { key: 'ac_energy', label: 'AC Energy Sensor' },
-      { key: 'condensation_rate', label: 'Condensation Rate Sensor' },
+      { key: 'heat_gain', label: this._t('heat_gain_sensor') },
+      { key: 'ac_cooling', label: this._t('ac_cooling_sensor') },
+      { key: 'net_balance', label: this._t('net_balance_sensor') },
+      { key: 'ac_cop', label: this._t('ac_cop_sensor') },
+      { key: 'time_to_1c', label: this._t('time_to_1c_sensor') },
+      { key: 'daily_balance', label: this._t('daily_balance_sensor') },
+      { key: 'total_balance', label: this._t('total_balance_sensor') },
+      { key: 'heat_absorbed', label: this._t('heat_absorbed_sensor') },
+      { key: 'ac_energy', label: this._t('ac_energy_sensor') },
+      { key: 'condensation_rate', label: this._t('condensation_rate_sensor') },
     ];
 
     const sensorEntities = (this._hass && this._hass.states)
@@ -149,16 +274,24 @@ class ThermalBalanceCardEditor extends HTMLElement {
       return fname ? `${fname} (${eid})` : eid;
     };
 
+    const isCompact = Boolean(this._config.compact || this._config.compact_view);
+
     const fieldsHtml = fields.map(f => {
-      const currentVal = this._config[f.key] || auto[f.key] || '';
+      const currentVal = this._config[f.key] || '';
+      const autoLabel = getAutoLabel(f.key);
+
+      const options = [
+        `<option value="" ${currentVal === '' ? 'selected' : ''}>Auto (${autoLabel})</option>`,
+        ...sensorEntities.map(e =>
+          `<option value="${e.eid}" ${currentVal === e.eid ? 'selected' : ''}>${e.name}</option>`
+        )
+      ].join('');
+
       return `
         <div class="editor-row">
           <label class="editor-label">${f.label}</label>
           <select class="editor-select" configValue="${f.key}">
-            <option value="">-- Auto-discovered: ${getAutoLabel(f.key)} --</option>
-            ${sensorEntities.map(opt => `
-              <option value="${opt.eid}" ${opt.eid === currentVal ? 'selected' : ''}>${opt.name}</option>
-            `).join('')}
+            ${options}
           </select>
         </div>
       `;
@@ -166,57 +299,80 @@ class ThermalBalanceCardEditor extends HTMLElement {
 
     this.shadowRoot.innerHTML = `
       <style>
-        :host {
-          display: block;
-          padding: 12px;
-          color: var(--primary-text-color, #fff);
-          font-family: inherit;
-          box-sizing: border-box;
-        }
         .editor-container {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          padding: 8px 0;
+          font-family: inherit;
         }
         .editor-title {
-          font-weight: 600;
-          font-size: 14px;
+          font-size: 15px;
+          font-weight: 700;
+          color: var(--primary-text-color, #FFF);
           margin-bottom: 4px;
-          color: var(--secondary-text-color, #aaa);
         }
         .editor-row {
           display: flex;
           flex-direction: column;
           gap: 4px;
         }
-        .editor-label {
-          font-size: 12px;
-          color: var(--secondary-text-color, #ccc);
+        .editor-row-inline {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 6px 0;
+          border-bottom: 1px solid var(--divider-color, #233045);
         }
-        .editor-select {
-          background: var(--card-background-color, #1c2538);
-          color: var(--primary-text-color, #fff);
-          border: 1px solid var(--divider-color, rgba(255,255,255,0.1));
+        .editor-label {
+          font-size: 12.5px;
+          font-weight: 500;
+          color: var(--secondary-text-color, #9CA3AF);
+        }
+        .editor-select, .editor-input {
+          background: var(--card-background-color, #162032);
+          color: var(--primary-text-color, #FFF);
+          border: 1px solid var(--divider-color, #233045);
           border-radius: 6px;
           padding: 8px 10px;
           font-size: 13px;
           font-family: inherit;
           width: 100%;
+          box-sizing: border-box;
         }
-        .editor-select:focus {
+        .editor-select:focus, .editor-input:focus {
           outline: none;
           border-color: var(--primary-color, #03a9f4);
         }
+        .editor-checkbox {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+        }
       </style>
       <div class="editor-container">
-        <div class="editor-title">Thermal Balance Sensors Configuration</div>
+        <div class="editor-title">${this._t('editor_title')}</div>
+        
+        <div class="editor-row-inline">
+          <label class="editor-label" style="font-weight: 600; color: var(--primary-text-color, #FFF);">${this._t('compact_view')}</label>
+          <input type="checkbox" class="editor-checkbox" configValue="compact" ${isCompact ? 'checked' : ''}/>
+        </div>
+
+        <div class="editor-row">
+          <label class="editor-label">${this._t('card_title_label')}</label>
+          <input type="text" class="editor-input" configValue="title" value="${this._config.title || ''}" placeholder="Thermal Balance"/>
+        </div>
+
         ${fieldsHtml}
       </div>
     `;
 
-    const selects = this.shadowRoot.querySelectorAll('.editor-select');
+    const selects = this.shadowRoot.querySelectorAll('.editor-select, .editor-input, .editor-checkbox');
     selects.forEach(s => {
       s.addEventListener('change', this._valueChanged.bind(this));
+      if (s.tagName === 'INPUT' && s.type === 'text') {
+        s.addEventListener('input', this._valueChanged.bind(this));
+      }
     });
   }
 }
@@ -263,7 +419,13 @@ class ThermalBalanceCard extends HTMLElement {
   }
 
   getCardSize() {
-    return 6;
+    return (this._config && (this._config.compact || this._config.compact_view)) ? 4 : 6;
+  }
+
+  _t(key, defaultText = '') {
+    const lang = (this._hass && (this._hass.locale?.language || this._hass.language)) || 'en';
+    const langCode = lang.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+    return (TRANSLATIONS[langCode] && TRANSLATIONS[langCode][key]) || (TRANSLATIONS.en && TRANSLATIONS.en[key]) || defaultText || key;
   }
 
   /* ─── Helpers for Entity Resolution ─── */
@@ -304,7 +466,7 @@ class ThermalBalanceCard extends HTMLElement {
   _fmtTime(val, direction) {
     if (val === null || val === undefined) return '—';
     const m = Math.round(val);
-    if (m === 0 && direction === 'equilibrium') return 'Stable';
+    if (m === 0 && direction === 'equilibrium') return this._t('stable');
     if (m >= 60) {
       const h = Math.floor(m / 60);
       const rm = m % 60;
@@ -371,9 +533,11 @@ class ThermalBalanceCard extends HTMLElement {
   get _icons() {
     return {
       sun: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF7A3C" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`,
+      fire: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF7A3C" stroke-width="2" stroke-linecap="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+      fireLg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF7A3C" stroke-width="2" stroke-linecap="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
       snowflake: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5.5" y1="5.5" x2="18.5" y2="18.5"/><line x1="18.5" y1="5.5" x2="5.5" y2="18.5"/><polyline points="8,2 12,6 16,2"/><polyline points="8,22 12,18 16,22"/><polyline points="2,8 6,12 2,16"/><polyline points="22,8 18,12 22,16"/></svg>`,
       snowflakeLg: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4DA3FF" stroke-width="2" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="5.5" y1="5.5" x2="18.5" y2="18.5"/><line x1="18.5" y1="5.5" x2="5.5" y2="18.5"/><polyline points="8,2 12,6 16,2"/><polyline points="8,22 12,18 16,22"/><polyline points="2,8 6,12 2,16"/><polyline points="22,8 18,12 22,16"/></svg>`,
-      thermo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E5E7EB" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`,
+      thermo: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>`,
       bolt: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FACC15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
       trend: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF7A3C" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
     };
@@ -514,7 +678,7 @@ class ThermalBalanceCard extends HTMLElement {
     return `${linePath} L ${width} ${height} L 0 ${height} Z`;
   }
 
-  _renderTrendSvg(heatPoints, coolPoints) {
+  _renderTrendSvg(heatPoints, coolPoints, isHeating = false) {
     const width = 300;
     const height = 65;
     const all = [...(heatPoints || []), ...(coolPoints || [])];
@@ -526,6 +690,8 @@ class ThermalBalanceCard extends HTMLElement {
     const coolLine = this._pointsToPath(coolPoints, width, height, maxVal);
     const coolArea = this._pointsToArea(coolPoints, width, height, maxVal);
 
+    const hvacColor = isHeating ? '#FF7A3C' : '#4DA3FF';
+
     return `
       <svg viewBox="0 0 ${width} ${height}" class="trend-svg" preserveAspectRatio="none">
         <defs>
@@ -534,8 +700,8 @@ class ThermalBalanceCard extends HTMLElement {
             <stop offset="100%" stop-color="#FF7A3C" stop-opacity="0.0"/>
           </linearGradient>
           <linearGradient id="coolTrendGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#4DA3FF" stop-opacity="0.35"/>
-            <stop offset="100%" stop-color="#4DA3FF" stop-opacity="0.0"/>
+            <stop offset="0%" stop-color="${hvacColor}" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="${hvacColor}" stop-opacity="0.0"/>
           </linearGradient>
         </defs>
         <!-- Grid lines -->
@@ -545,12 +711,12 @@ class ThermalBalanceCard extends HTMLElement {
         ${heatArea ? `<path d="${heatArea}" fill="url(#heatTrendGrad)"/>` : ''}
         ${coolArea ? `<path d="${coolArea}" fill="url(#coolTrendGrad)"/>` : ''}
         ${heatLine ? `<path d="${heatLine}" fill="none" stroke="#FF7A3C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
-        ${coolLine ? `<path d="${coolLine}" fill="none" stroke="#4DA3FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+        ${coolLine ? `<path d="${coolLine}" fill="none" stroke="${hvacColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>` : ''}
       </svg>
     `;
   }
 
-  _initEChart() {
+  _initEChart(isHeating = false) {
     const container = this.shadowRoot ? this.shadowRoot.querySelector('#echart-container') : null;
     if (!container) return;
 
@@ -577,6 +743,10 @@ class ThermalBalanceCard extends HTMLElement {
         return `${hh}:${mm}`;
       });
 
+      const hvacSeriesName = isHeating ? this._t('heating') : this._t('cooling');
+      const hvacColor = isHeating ? '#FF7A3C' : '#4DA3FF';
+      const hvacGradAlpha = isHeating ? 'rgba(255, 122, 60, 0.25)' : 'rgba(77, 163, 255, 0.25)';
+
       const option = {
         backgroundColor: 'transparent',
         legend: {
@@ -586,7 +756,7 @@ class ThermalBalanceCard extends HTMLElement {
           textStyle: { color: '#9CA3AF', fontSize: 10 },
           itemWidth: 10,
           itemHeight: 6,
-          data: ['Heat', 'Cooling', 'Net']
+          data: [this._t('heat'), hvacSeriesName, this._t('net')]
         },
         tooltip: {
           trigger: 'axis',
@@ -629,7 +799,7 @@ class ThermalBalanceCard extends HTMLElement {
         },
         series: [
           {
-            name: 'Heat',
+            name: this._t('heat'),
             type: 'line',
             smooth: 0.3,
             smoothMonotone: 'x',
@@ -648,7 +818,7 @@ class ThermalBalanceCard extends HTMLElement {
             data: heatPoints.map(v => Math.round(v))
           },
           {
-            name: 'Cooling',
+            name: hvacSeriesName,
             type: 'line',
             smooth: 0.3,
             smoothMonotone: 'x',
@@ -656,18 +826,18 @@ class ThermalBalanceCard extends HTMLElement {
             showSymbol: false,
             symbol: 'circle',
             symbolSize: 6,
-            itemStyle: { color: '#4DA3FF' },
-            lineStyle: { width: 2.0, color: '#4DA3FF' },
+            itemStyle: { color: hvacColor },
+            lineStyle: { width: 2.0, color: hvacColor },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(77, 163, 255, 0.25)' },
-                { offset: 1, color: 'rgba(77, 163, 255, 0.0)' }
+                { offset: 0, color: hvacGradAlpha },
+                { offset: 1, color: 'rgba(0, 0, 0, 0.0)' }
               ])
             },
             data: coolPoints.map(v => Math.round(v))
           },
           {
-            name: 'Net',
+            name: this._t('net'),
             type: 'line',
             smooth: 0.3,
             smoothMonotone: 'x',
@@ -712,9 +882,12 @@ class ThermalBalanceCard extends HTMLElement {
         if (!s) return '';
         return `${eid}=${s.state}|${JSON.stringify(s.attributes)}`;
       });
-      const hash = parts.join(';;');
+      const hash = parts.join(';;') + `;compact=${Boolean(this._config.compact || this._config.compact_view)}`;
       if (hash === this._lastHash && this.shadowRoot && this.shadowRoot.innerHTML !== '') return;
       this._lastHash = hash;
+
+      const isCompact = Boolean(this._config.compact || this._config.compact_view);
+      const cardTitle = this._config.title || this._t('title');
 
       // Read values
       const heatGain = this._getState('heat_gain');
@@ -728,7 +901,8 @@ class ThermalBalanceCard extends HTMLElement {
       const acEnergy = this._getState('ac_energy');
       const condensation = this._getState('condensation_rate');
 
-      // AC cooling attributes
+      // AC cooling & heating attributes
+      const isHeating = Boolean(this._getAttr('ac_cooling', 'is_heating') || this._getAttr('net_balance', 'is_heating'));
       const deltaT = this._getAttr('ac_cooling', 'delta_t_ac_c');
       const exitTemp = this._getAttr('ac_cooling', 'ac_exit_temperature_c');
       const calcExitTemp = this._getAttr('ac_cooling', 'ac_calc_exit_temperature_c');
@@ -754,7 +928,6 @@ class ThermalBalanceCard extends HTMLElement {
       const empiricalK = this._getState('empirical_k_factor') ?? this._getAttr('heat_gain', 'hlc_w_k');
       const empiricalKDev = this._getAttr('empirical_k_factor', 'deviation_percent');
       const empiricalKGrade = this._getAttr('empirical_k_factor', 'insulation_grade');
-      const empiricalKAuto = this._getAttr('empirical_k_factor', 'auto_calibrated');
 
       // Cost, Savings & Recommendation states
       const acCost = this._getState('ac_cost');
@@ -781,20 +954,28 @@ class ThermalBalanceCard extends HTMLElement {
       const timeDisplay = this._fmtTime(time1c, direction);
 
       const ventColor = windowOpen ? (pVent > 20 ? '#FF7A3C' : (pVent < -20 ? '#4DA3FF' : '#00C896')) : '#6B7280';
-      const ventValText = !windowOpen ? 'Closed (0 W)' : (pVent !== null && pVent !== undefined ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) + ' W' : '—');
+      const ventValText = !windowOpen ? `${this._t('window_closed')} (0 W)` : (pVent !== null && pVent !== undefined ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) + ' W' : '—');
 
+      const modeBadge = isHeating ? `🔥 ${this._t('heat_mode')}` : `❄️ ${this._t('cool_mode')}`;
       const copText = cop !== null ? `COP ${this._fmt(cop, 2)}` : '';
-      const shrText = shr !== null ? `SHR ${this._fmt(shr, 0)}%` : '';
-      const ventHeaderBadge = windowOpen ? (pVent !== null ? (pVent >= 0 ? `🪟 +${Math.round(pVent)}W` : `🪟 ${Math.round(pVent)}W`) : '🪟 Open') : '🪟 Closed';
-      const subtitle = [copText, shrText, ventHeaderBadge].filter(Boolean).join(' · ');
+      const shrText = (!isHeating && shr !== null) ? `SHR ${this._fmt(shr, 0)}%` : '';
+      const ventHeaderBadge = windowOpen ? (pVent !== null ? (pVent >= 0 ? `🪟 +${Math.round(pVent)}W` : `🪟 ${Math.round(pVent)}W`) : `🪟 ${this._t('window_open')}`) : `🪟 ${this._t('window_closed')}`;
+      const subtitle = [modeBadge, copText, shrText, ventHeaderBadge].filter(Boolean).join(' · ');
+
+      const acGaugeTitle = isHeating ? this._t('ac_heating') : this._t('ac_cooling');
+      const acGaugeColor = isHeating ? '#FF7A3C' : '#4DA3FF';
+      const acGaugeSubColor = isHeating ? '#FFB199' : '#93C5FD';
+      const acGaugeIcon = isHeating ? this._icons.fire : this._icons.snowflake;
+      const acSectionTitle = isHeating ? this._t('heating_perf') : this._t('ac_cooling_perf');
+      const acSectionIcon = isHeating ? this._icons.fireLg : this._icons.snowflakeLg;
 
       const acRows = [
         { label: 'ΔT AC', value: deltaT, unit: '°C', dec: 1, color: '#374151' },
-        { label: hasMeasured ? 'Exit Temp (Meas)' : 'Exit Temp', value: exitTemp, unit: '°C', dec: 1, color: hasMeasured ? '#4DA3FF' : '#374151' },
+        { label: hasMeasured ? 'Exit Temp (Meas)' : 'Exit Temp', value: exitTemp, unit: '°C', dec: 1, color: hasMeasured ? (isHeating ? '#FF7A3C' : '#4DA3FF') : '#374151' },
         ...(hasMeasured ? [{ label: 'Exit Temp (Calc)', value: calcExitTemp, unit: '°C', dec: 1, color: '#FACC15' }] : []),
         { label: 'Sensible', value: sensible, unit: 'W', dec: 0, color: '#374151' },
-        { label: 'Latent', value: latent, unit: 'W', dec: 0, color: '#374151' },
-        { label: 'SHR', value: shr, unit: '%', dec: 1, color: '#374151' },
+        ...(!isHeating ? [{ label: 'Latent', value: latent, unit: 'W', dec: 0, color: '#374151' }] : []),
+        ...(!isHeating ? [{ label: 'SHR', value: shr, unit: '%', dec: 1, color: '#374151' }] : []),
         { label: 'Enthalpy', value: enthalpy, unit: 'kJ/kg', dec: 1, color: '#374151' },
         { label: 'Airflow', value: airflow, unit: 'm³/h', dec: 0, color: '#00C896' },
         { label: 'Dew Pt In', value: dewIn, unit: '°C', dec: 1, color: '#4DA3FF' },
@@ -806,7 +987,7 @@ class ThermalBalanceCard extends HTMLElement {
 
       const heatPoints = this._getTrendPoints('heat_gain', heatGain);
       const coolPoints = this._getTrendPoints('ac_cooling', acCooling);
-      const trendSvg = this._renderTrendSvg(heatPoints, coolPoints);
+      const trendSvg = this._renderTrendSvg(heatPoints, coolPoints, isHeating);
 
       const acRowsHtml = acRows.map(r => `
         <div class="ac-row">
@@ -817,17 +998,17 @@ class ThermalBalanceCard extends HTMLElement {
 
       this.shadowRoot.innerHTML = `
         <style>${this._css()}</style>
-        <ha-card>
+        <ha-card class="${isHeating ? 'heating-theme' : 'cooling-theme'} ${isCompact ? 'compact-mode' : ''}">
           <div class="tb-card">
 
             <!-- SMART ADVICE BANNERS -->
             ${recOpenWin ? `
               <div class="advice-banner advice-window">
-                <span>🍃 <b>Open Window Recommended!</b> Outdoor air is cooler than indoor. Open window for free natural cooling!</span>
+                <span>🍃 <b>${this._t('open_win_rec')}</b></span>
               </div>` : ''}
             ${recCloseCur ? `
               <div class="advice-banner advice-curtains">
-                <span>☀️ <b>Close Curtains Recommended!</b> High solar radiation! Close curtains to reduce heat gain & save money.</span>
+                <span>☀️ <b>${this._t('close_cur_rec')}</b></span>
               </div>` : ''}
 
             <div class="card-layout">
@@ -839,11 +1020,11 @@ class ThermalBalanceCard extends HTMLElement {
                   <div class="header-left">
                     <div class="header-icon">${this._icons.thermo}</div>
                     <div class="header-text">
-                      <div class="header-title">Thermal Balance</div>
+                      <div class="header-title">${cardTitle}</div>
                       ${subtitle ? `<div class="header-sub">${subtitle}</div>` : ''}
                     </div>
                   </div>
-                  <div class="header-badge" style="background:rgba(139, 92, 246, 0.15); color:#8B5CF6; border:1px solid rgba(139, 92, 246, 0.3)">
+                  <div class="header-badge" style="background:var(--tb-theme-badge-bg); color:var(--tb-theme-accent); border:1px solid var(--tb-theme-border);">
                     ${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} W
                   </div>
                 </div>
@@ -851,98 +1032,98 @@ class ThermalBalanceCard extends HTMLElement {
                 <!-- GAUGES -->
                 <div class="gauges-row">
                   ${heatGain !== null && heatGain < 0
-                    ? this._gauge(heatGain, 3500, '#4DA3FF', '#93C5FD', 'Heat Loss', this._icons.snowflake)
-                    : this._gauge(heatGain, 3500, '#FF7A3C', '#FFB199', 'Heat Gain', this._icons.sun)}
-                  ${this._gauge(acCooling, 3500, '#4DA3FF', '#93C5FD', 'AC Cooling', this._icons.snowflake)}
+                    ? this._gauge(heatGain, 3500, '#4DA3FF', '#93C5FD', this._t('heat_loss'), this._icons.snowflake)
+                    : this._gauge(heatGain, 3500, '#FF7A3C', '#FFB199', this._t('heat_gain'), this._icons.sun)}
+                  ${this._gauge(acCooling, 3500, acGaugeColor, acGaugeSubColor, acGaugeTitle, acGaugeIcon)}
                 </div>
 
                 <!-- METRICS BAR -->
                 <div class="metrics-bar">
                   <div class="metric-block">
-                    <div class="metric-icon" style="color:#8B5CF6">⚡</div>
-                    <div class="metric-val" style="color:#8B5CF6">${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} <span class="metric-unit">W</span></div>
-                    <div class="metric-label">Net Balance</div>
+                    <div class="metric-icon" style="color:var(--tb-theme-accent)">⚡</div>
+                    <div class="metric-val" style="color:var(--tb-theme-accent)">${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} <span class="metric-unit">W</span></div>
+                    <div class="metric-label">${this._t('net_balance')}</div>
                   </div>
                   <div class="metric-block">
                     <div class="metric-icon" style="color:${ventColor}">🪟</div>
                     <div class="metric-val" style="color:${ventColor}">${pVent !== null && pVent !== undefined && windowOpen ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) : (windowOpen ? '0' : 'Off')} <span class="metric-unit">${windowOpen ? 'W' : ''}</span></div>
-                    <div class="metric-label">Ventilation</div>
+                    <div class="metric-label">${this._t('ventilation')}</div>
                   </div>
                   <div class="metric-block">
                     <div class="metric-icon" style="color:#FACC15">${dirInfo.sym}</div>
                     <div class="metric-val" style="color:#FACC15">${timeDisplay}</div>
-                    <div class="metric-label">To 1°C</div>
+                    <div class="metric-label">${this._t('to_1c')}</div>
                   </div>
                   <div class="metric-block">
                     <div class="metric-icon" style="color:#93C5FD">💧</div>
                     <div class="metric-val" style="color:#93C5FD">${condensation !== null ? this._fmt(condensation, 2) : '—'} <span class="metric-unit">L/h</span></div>
-                    <div class="metric-label">Condensation</div>
+                    <div class="metric-label">${this._t('condensation')}</div>
                   </div>
                 </div>
 
                 <!-- VENTILATION & THERMAL SOURCES -->
                 <div class="section">
-                  <div class="section-title">🪟 <span>Ventilation & Heat Exchange</span></div>
+                  <div class="section-title">🪟 <span>${this._t('vent_heat_exchange')}</span></div>
                   <div class="ac-grid">
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${windowOpen ? '#FF7A3C' : '#6B7280'}"></span>
-                      <span class="ac-label">Window</span>
-                      <span class="ac-val" style="color:${windowOpen ? '#FF7A3C' : '#00C896'}">${windowOpen ? 'Open' : 'Closed'}</span>
+                      <span class="ac-label">${this._t('window')}</span>
+                      <span class="ac-val" style="color:${windowOpen ? '#FF7A3C' : '#00C896'}">${windowOpen ? this._t('window_open') : this._t('window_closed')}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${ventColor}"></span>
-                      <span class="ac-label">Ventilation</span>
+                      <span class="ac-label">${this._t('ventilation')}</span>
                       <span class="ac-val" style="color:${ventColor}">${ventValText}</span>
                     </div>
                     ${windSpeed !== null && windSpeed !== undefined ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#60A5FA"></span>
-                      <span class="ac-label">Wind</span>
+                      <span class="ac-label">${this._t('wind')}</span>
                       <span class="ac-val" style="color:#60A5FA">${this._fmt(windSpeed, 1)} m/s <span class="ac-unit">(${this._fmt(windDir, 0)}°)</span></span>
                     </div>
                     ` : ''}
                     ${windACH !== null && windACH !== undefined && windowOpen ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#34D399"></span>
-                      <span class="ac-label">Air Change (ACH)</span>
-                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">per h</span></span>
+                      <span class="ac-label">${this._t('air_change')}</span>
+                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">/ h</span></span>
                     </div>
                     ` : ''}
                     ${curtainsState !== null && curtainsState !== undefined ? `
                     <div class="ac-row">
                       <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
-                      <span class="ac-label">Curtains</span>
-                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? `Closed (-${curtainReducePct}%)` : 'Open'} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
+                      <span class="ac-label">${this._t('curtains')}</span>
+                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? `${this._t('curtains_closed')} (-${curtainReducePct}%)` : this._t('curtains_open')} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
                     </div>
                     ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
                     ` : ''}
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#FACC15"></span>
-                      <span class="ac-label">Solar</span>
+                      <span class="ac-label">${this._t('solar')}</span>
                       <span class="ac-val">${pSolar !== null && pSolar !== undefined ? '+' + this._fmt(pSolar, 0) + ' W' : '—'}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#8B5CF6"></span>
-                      <span class="ac-label">Walls</span>
+                      <span class="ac-label">${this._t('walls')}</span>
                       <span class="ac-val">${pWall !== null && pWall !== undefined ? (pWall > 0 ? '+' : '') + this._fmt(pWall, 0) + ' W' : '—'}</span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#00C896"></span>
-                      <span class="ac-label">K-Factor (Actual)</span>
+                      <span class="ac-label">${this._t('k_factor_actual')}</span>
                       <span class="ac-val" style="color:#00C896">${empiricalK !== null ? this._fmt(empiricalK, 1) + ' W/K' : '—'} <span class="ac-unit">${empiricalKDev !== null ? '(' + (empiricalKDev > 0 ? '+' : '') + this._fmt(empiricalKDev, 0) + '%)' : ''}</span></span>
                     </div>
                     <div class="ac-row">
                       <span class="ac-dot" style="background:#3B82F6"></span>
-                      <span class="ac-label">Insulation</span>
-                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || 'Estimated'}</span>
+                      <span class="ac-label">${this._t('insulation')}</span>
+                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || this._t('estimated')}</span>
                     </div>
-                    ${windowOpen ? `<div class="curtains-note">🪟 Window is open — K-factor is unreliable</div>` : ''}
+                    ${windowOpen ? `<div class="curtains-note">🪟 ${this._t('window_open_k_note')}</div>` : ''}
                   </div>
                 </div>
 
                 <!-- AC PERFORMANCE -->
                 <div class="section">
-                  <div class="section-title">${this._icons.snowflakeLg} <span>AC Performance</span></div>
+                  <div class="section-title">${acSectionIcon} <span>${acSectionTitle}</span></div>
                   <div class="ac-grid">${acRowsHtml}</div>
                 </div>
               </div>
@@ -953,10 +1134,10 @@ class ThermalBalanceCard extends HTMLElement {
                 <div class="section" style="flex: 1; display: flex; flex-direction: column;">
                   <div class="section-title">
                     ${this._icons.trend}
-                    <span>24h Thermal Trend</span>
+                    <span>${this._t('trend_24h')}</span>
                     <div class="trend-legend">
-                      <span class="legend-item"><span class="legend-dot" style="background:#FF7A3C"></span>Heat</span>
-                      <span class="legend-item"><span class="legend-dot" style="background:#4DA3FF"></span>Cooling</span>
+                      <span class="legend-item"><span class="legend-dot" style="background:#FF7A3C"></span>${this._t('heat')}</span>
+                      <span class="legend-item"><span class="legend-dot" style="background:${acGaugeColor}"></span>${isHeating ? this._t('heating') : this._t('cooling')}</span>
                     </div>
                   </div>
                   <div id="echart-container" style="width: 100%; flex: 1; min-height: 150px; margin-top: 4px;">${trendSvg}</div>
@@ -964,43 +1145,43 @@ class ThermalBalanceCard extends HTMLElement {
 
                 <!-- ENERGY & COSTS -->
                 <div class="section">
-                  <div class="section-title">${this._icons.bolt} <span>Energy & Cost Intelligence</span></div>
+                  <div class="section-title">${this._icons.bolt} <span>${this._t('energy_cost_intel')}</span></div>
                   <div class="energy-grid">
                     <div class="energy-card">
                       <div class="energy-icon" style="color:${dailyColor}">📅</div>
                       <div class="energy-val" style="color:${dailyColor}">${dailyBal !== null ? this._fmt(dailyBal, 1) : '—'}</div>
                       <div class="energy-unit">kWh</div>
-                      <div class="energy-label">Daily Balance</div>
+                      <div class="energy-label">${this._t('daily_balance')}</div>
                     </div>
                     <div class="energy-card">
                       <div class="energy-icon" style="color:#8B5CF6">Σ</div>
                       <div class="energy-val" style="color:#8B5CF6">${totalBal !== null ? this._fmt(totalBal, 1) : '—'}</div>
                       <div class="energy-unit">kWh</div>
-                      <div class="energy-label">Total Balance</div>
+                      <div class="energy-label">${this._t('total_balance')}</div>
                     </div>
                     <div class="energy-card">
                       <div class="energy-icon" style="color:#FF7A3C">🔥</div>
                       <div class="energy-val" style="color:#FF7A3C">${heatAbsorbed !== null ? this._fmt(heatAbsorbed, 1) : '—'}</div>
                       <div class="energy-unit">kWh</div>
-                      <div class="energy-label">Heat Absorbed</div>
+                      <div class="energy-label">${this._t('heat_absorbed')}</div>
                     </div>
                     <div class="energy-card">
-                      <div class="energy-icon" style="color:#4DA3FF">❄</div>
-                      <div class="energy-val" style="color:#4DA3FF">${acEnergy !== null ? this._fmt(acEnergy, 1) : '—'}</div>
+                      <div class="energy-icon" style="color:${acGaugeColor}">${isHeating ? '🔥' : '❄'}</div>
+                      <div class="energy-val" style="color:${acGaugeColor}">${acEnergy !== null ? this._fmt(acEnergy, 1) : '—'}</div>
                       <div class="energy-unit">kWh</div>
-                      <div class="energy-label">AC Energy</div>
+                      <div class="energy-label">${this._t('ac_energy')}</div>
                     </div>
                     <div class="energy-card">
                       <div class="energy-icon" style="color:#FACC15">💰</div>
                       <div class="energy-val" style="color:#FACC15">${acCost !== null ? this._fmt(acCost, 2) : '—'}</div>
                       <div class="energy-unit">${currencySymbol}</div>
-                      <div class="energy-label">AC Cost</div>
+                      <div class="energy-label">${this._t('ac_cost')}</div>
                     </div>
                     <div class="energy-card">
                       <div class="energy-icon" style="color:#00C896">🌱</div>
                       <div class="energy-val" style="color:#00C896">${dailySavings !== null ? this._fmt(dailySavings, 2) : '—'}</div>
                       <div class="energy-unit">${currencySymbol}/day</div>
-                      <div class="energy-label">Shading Savings</div>
+                      <div class="energy-label">${this._t('shading_savings')}</div>
                     </div>
                   </div>
                 </div>
@@ -1010,7 +1191,7 @@ class ThermalBalanceCard extends HTMLElement {
           </div>
         </ha-card>`;
 
-      this._initEChart();
+      this._initEChart(isHeating);
     } catch (err) {
       console.error('ThermalBalanceCard render error:', err);
     }
@@ -1019,23 +1200,23 @@ class ThermalBalanceCard extends HTMLElement {
   _renderPreview() {
     this.shadowRoot.innerHTML = `
       <style>${this._css()}</style>
-      <ha-card>
+      <ha-card class="cooling-theme">
         <div class="tb-card">
           <div class="header">
             <div class="header-left">
               <div class="header-icon">${this._icons.thermo}</div>
               <div class="header-text">
-                <div class="header-title">Thermal Balance</div>
+                <div class="header-title">${this._t('title')}</div>
                 <div class="header-sub">COP 3.33 · SHR 85%</div>
               </div>
             </div>
-            <div class="header-badge" style="background:rgba(139, 92, 246, 0.15); color:#8B5CF6; border:1px solid rgba(139, 92, 246, 0.3)">
+            <div class="header-badge" style="background:var(--tb-theme-badge-bg); color:var(--tb-theme-accent); border:1px solid var(--tb-theme-border)">
               -504 W
             </div>
           </div>
           <div class="gauges-row">
-            ${this._gauge(927, 3500, '#FF7A3C', '#FFB199', 'Heat Gain', this._icons.sun)}
-            ${this._gauge(1431, 3500, '#4DA3FF', '#93C5FD', 'AC Cooling', this._icons.snowflake)}
+            ${this._gauge(927, 3500, '#FF7A3C', '#FFB199', this._t('heat_gain'), this._icons.sun)}
+            ${this._gauge(1431, 3500, '#4DA3FF', '#93C5FD', this._t('ac_cooling'), this._icons.snowflake)}
           </div>
         </div>
       </ha-card>`;
@@ -1064,11 +1245,24 @@ class ThermalBalanceCard extends HTMLElement {
       ha-card {
         background: #0B1220;
         border-radius: 18px;
-        box-shadow: 0 10px 36px rgba(0,0,0,0.55), 0 0 25px rgba(77,163,255,0.25);
-        border: 1px solid rgba(77,163,255,0.25);
+        box-shadow: 0 10px 36px rgba(0,0,0,0.55), 0 0 25px var(--tb-theme-glow);
+        border: 1px solid var(--tb-theme-border);
         overflow: hidden;
         color: var(--tb-primary);
         padding: 0;
+        transition: border-color 0.4s ease, box-shadow 0.4s ease;
+      }
+      ha-card.cooling-theme {
+        --tb-theme-accent: #4DA3FF;
+        --tb-theme-glow: rgba(77, 163, 255, 0.22);
+        --tb-theme-border: rgba(77, 163, 255, 0.25);
+        --tb-theme-badge-bg: rgba(77, 163, 255, 0.15);
+      }
+      ha-card.heating-theme {
+        --tb-theme-accent: #FF7A3C;
+        --tb-theme-glow: rgba(255, 122, 60, 0.25);
+        --tb-theme-border: rgba(255, 122, 60, 0.35);
+        --tb-theme-badge-bg: rgba(255, 122, 60, 0.18);
       }
       .tb-card {
         padding: 16px;
@@ -1078,7 +1272,7 @@ class ThermalBalanceCard extends HTMLElement {
       .advice-banner {
         padding: 10px 14px;
         border-radius: 12px;
-        font-size: 14px;
+        font-size: 13.5px;
         line-height: 1.4;
         display: flex;
         align-items: center;
@@ -1129,7 +1323,8 @@ class ThermalBalanceCard extends HTMLElement {
       .header-icon {
         width: 36px; height: 36px;
         display: flex; align-items: center; justify-content: center;
-        background: rgba(100,180,255,0.12);
+        background: var(--tb-theme-badge-bg);
+        color: var(--tb-theme-accent);
         border-radius: 10px;
       }
       .header-icon svg { width: 20px; height: 20px; }
@@ -1152,7 +1347,7 @@ class ThermalBalanceCard extends HTMLElement {
         padding: 5px 12px;
         border-radius: 20px;
         white-space: nowrap;
-        transition: color 0.3s ease, background 0.3s ease;
+        transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease;
       }
       .gauges-row {
         display: grid;
@@ -1180,7 +1375,7 @@ class ThermalBalanceCard extends HTMLElement {
         display: flex;
         align-items: center;
         gap: 6px;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 600;
         color: var(--tb-secondary);
         margin-top: 6px;
@@ -1234,7 +1429,7 @@ class ThermalBalanceCard extends HTMLElement {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 14px;
+        font-size: 13.5px;
         font-weight: 700;
         color: #FFFFFF;
         margin-bottom: 10px;
@@ -1258,7 +1453,7 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 8px;
         padding: 7px 6px;
         border-bottom: 1px solid #233045;
-        font-size: 13px;
+        font-size: 12.5px;
         min-width: 0;
       }
       .ac-row:last-child { border-bottom: none; }
@@ -1293,7 +1488,7 @@ class ThermalBalanceCard extends HTMLElement {
       }
       .curtains-note {
         grid-column: 1 / -1;
-        font-size: 13px;
+        font-size: 12.5px;
         color: var(--tb-secondary);
         padding: 3px 6px 6px 20px;
         line-height: 1.4;
@@ -1321,7 +1516,7 @@ class ThermalBalanceCard extends HTMLElement {
       }
       .energy-icon { font-size: 18px; margin-bottom: 2px; }
       .energy-val {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 800;
         transition: color 0.3s ease;
         line-height: 1.2;
@@ -1343,7 +1538,7 @@ class ThermalBalanceCard extends HTMLElement {
         display: flex;
         align-items: center;
         gap: 14px;
-        font-size: 12.5px;
+        font-size: 12px;
         font-weight: 600;
         color: var(--tb-secondary);
       }
@@ -1366,6 +1561,49 @@ class ThermalBalanceCard extends HTMLElement {
         height: 60px;
         overflow: visible;
       }
+
+      /* ─── Compact Mode ─── */
+      ha-card.compact-mode .tb-card {
+        padding: 12px;
+      }
+      ha-card.compact-mode .card-layout {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+      }
+      ha-card.compact-mode .gauges-row {
+        gap: 8px;
+      }
+      ha-card.compact-mode .gauge-card {
+        padding: 6px 4px 6px;
+      }
+      ha-card.compact-mode .gauge-svg {
+        max-width: 130px;
+      }
+      ha-card.compact-mode .gauge-label {
+        font-size: 12px;
+        margin-top: 2px;
+      }
+      ha-card.compact-mode .metrics-bar {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+      ha-card.compact-mode .metric-block {
+        padding: 6px 4px;
+      }
+      ha-card.compact-mode .energy-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+      }
+      ha-card.compact-mode .energy-card {
+        padding: 6px 4px;
+      }
+      ha-card.compact-mode .energy-val {
+        font-size: 15px;
+      }
+      ha-card.compact-mode #echart-container {
+        min-height: 110px !important;
+      }
+
       @media (max-width: 360px) {
         .metrics-bar { grid-template-columns: repeat(2, 1fr); }
         .metric-val { font-size: 14px; }

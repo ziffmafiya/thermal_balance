@@ -6,6 +6,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -16,9 +17,11 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    BINARY_SENSOR_INSUFFICIENT_COOLING_CAPACITY,
     BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS,
     BINARY_SENSOR_RECOMMEND_OPEN_WINDOW,
     DOMAIN,
+    SENSOR_REQUIRED_AC_POWER,
 )
 from .coordinator import ThermalBalanceCoordinator
 
@@ -40,6 +43,12 @@ BINARY_SENSOR_TYPES: tuple[ThermalBalanceBinarySensorDescription, ...] = (
         key=BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS,
         name="Close Curtains Recommended",
         icon="mdi:curtains-closed",
+    ),
+    ThermalBalanceBinarySensorDescription(
+        key=BINARY_SENSOR_INSUFFICIENT_COOLING_CAPACITY,
+        name="Insufficient HVAC Capacity",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        icon="mdi:alert-circle-outline",
     ),
 )
 
@@ -121,5 +130,19 @@ class ThermalBalanceBinarySensor(CoordinatorEntity[ThermalBalanceCoordinator], B
             attrs["solar_radiation_w_m2"] = round(solar, 1)
             attrs["potential_heat_reduction_w"] = round(pot_w, 0)
             attrs["potential_daily_savings"] = f"{saved_cost_day:.2f} {symbol}/day"
+
+        elif key == BINARY_SENSOR_INSUFFICIENT_COOLING_CAPACITY:
+            is_heating = self.coordinator.is_heating
+            ac_max = self.coordinator.ac_max_cooling * (1.20 if is_heating else 1.0)
+            req_power = self.coordinator.data.get(SENSOR_REQUIRED_AC_POWER, 0.0)
+            if self.is_on:
+                attrs["advice"] = (
+                    f"Room thermal load ({req_power:.0f} W) exceeds rated equipment capacity ({ac_max:.0f} W). "
+                    "Close curtains or reduce ventilation to maintain comfort."
+                )
+            else:
+                attrs["advice"] = f"Equipment capacity ({ac_max:.0f} W) is sufficient for current thermal load."
+            attrs["rated_capacity_w"] = round(ac_max, 0)
+            attrs["required_power_w"] = round(req_power, 0)
 
         return attrs

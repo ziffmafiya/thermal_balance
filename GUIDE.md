@@ -28,76 +28,123 @@ $$\Delta P_{\text{net}} = P_{\text{env}} - P_{\text{cooling}} = (P_{\text{wall}}
 * **Проветривание ($P_{\text{vent}}$)**:
   $$P_{\text{vent}} = HLC_{\text{vent}} \cdot (T_{\text{out}} - T_{\text{in}}) \quad \text{при открытом окне}$$
   Где $HLC_{\text{vent}} = 4.0 \cdot V_{\text{room}} \cdot 0.336\text{ Вт/К}$ (при кратности воздухообмена 4.0/час).
-* **Солнечная радиация ($P_{\text{solar}}$) и Умное Зашторивание**:
-  $$P_{\text{solar}} = A_{\text{window}} \cdot I_{\text{solar}} \cdot g_{\text{shading}}$$
-  * При открытых шторах (или без датчика Lux): $g_{\text{shading}} = 0.70$ (70% тепла проходит внутрь).
-  * При зашторенных окнах (Lux $< 150\text{ lx}$ в дневное время): $g_{\text{shading}} = 0.20$ (нагрев от солнца **автоматически урезается на 70%**!).
+* **Солнечная радиация ($P_{\text{solar}}$), Геометрия Инсоляции (AOI) и Умное Зашторивание**:
+  Модель производит декомпозицию глобальной горизонтальной солнечной радиации ($GHI$) на прямую ($P_{\text{solar,direct}}$) и рассеянную ($P_{\text{solar,diffuse}}$) с учетом угла падения лучей на вертикальное окно:
+  $$\cos(\theta) = \cos(\gamma_s) \cdot \cos(\alpha_s - \alpha_w)$$
+  где $\gamma_s$ — высота солнца над горизонтом (`sun.sun` elevation), $\alpha_s$ — азимут солнца (`sun.sun` azimuth), $\alpha_w$ — азимут окна (`window_azimuth`).
+  * **Прямое солнце ($\cos(\theta) > 0$ и $\gamma_s > 0^\circ$)**: прямое излучение проецируется на плоскость стеклопакета $I_{\text{beam,window}} = DNI \cdot \cos(\theta)$.
+  * **Теневая сторона ($\cos(\theta) \le 0$)**: окно в тени (например, северная сторона в полдень) получает только рассеянный свет неба ($0.5 \cdot I_{\text{diffuse}}$) и отражение от земли ($0.10 \cdot I_{\text{solar}}$), исключая ложное завышение притока тепла.
+  * **Зашторивание**: при закрытых шторах (Lux $< 150\text{ lx}$) приток тепла от солнца дополнительно снижается согласно выбранному типу штор (для блэкаут — на 93%, $g = 0.05$).
+  $$P_{\text{solar}} = (P_{\text{solar,direct}} + P_{\text{solar,diffuse}})$$
 
 ### 🌌 2. Двойная Астрономическая Проверка Дневного Времени
 Чтобы люстры и светильники в комнате ночью не путали систему, статус `is_daylight` проверяется двойным способом:
 $$\text{is-daylight} = (I_{\text{solar}} > 10\text{ Вт/м}^2) \quad \text{ИЛИ} \quad (\text{sun.sun == 'above-horizon'} \quad \text{или} \quad \text{elevation} > 0^\circ)$$
 
-### ❄️ 3. Холодопроизводительность кондиционера ($P_{\text{cooling}}$) и Психрометрия
-* **Carnot COP & Съем тепла**:
-  Модель высчитывает теоретический Carnot COP кондиционера с учетом текущего перепада температур $(T_{\text{out}} - T_{\text{in}})$. Если подключен датчик выдува $T_{\text{exit}}$, реальная мощность съема тепла вычисляется по перепаду энтальпии воздуха $\Delta h$.
-* **Разделение на Явное и Скрытое охлаждение (SHR)**:
-  $$P_{\text{sensible}} = P_{\text{cooling}} \cdot SHR \quad (\text{охлаждение сухого воздуха})$$
-  $$P_{\text{latent}} = P_{\text{cooling}} \cdot (1 - SHR) \quad (\text{конденсация влаги})$$
-* **Скорость конденсации (Condensation Rate)**:
-  $$m_{\text{конденсат}} = \frac{P_{\text{latent}}}{627.8\text{ Вт·ч/Л}} \quad [\text{Литров / Час}]$$
+### ❄️🔥 3. Холодо- и Теплопроизводительность кондиционера ($P_{\text{hvac}}$) и Психрометрия
+* **Режим Охлаждения (Cooling)**:
+  * Theoretical Carnot & Empirical COP: рассчитывается съем тепла из помещения ($P_{\text{cooling}}$).
+  * Разделение на Явное и Скрытое охлаждение (SHR): $P_{\text{sensible}} = P_{\text{cooling}} \cdot SHR$, $P_{\text{latent}} = P_{\text{cooling}} \cdot (1 - SHR)$.
+  * Скорость конденсации влаги: $m_{\text{конденсат}} = \frac{P_{\text{latent}}}{627.8\text{ Вт·ч/Л}}$ [Л/ч].
+  * Чистый баланс: $P_{\text{net}} = P_{\text{env}} - P_{\text{cooling}}$.
+* **Режим Обогрева (Heating / Тепловой насос)**:
+  * В зимний период и межсезонье тепловой насос перекачивает тепло с улицы в комнату ($P_{\text{heating}} = P_{\text{elec}} \cdot COP_{\text{heating}}$).
+  * $SHR = 1.0$, скрытое охлаждение и конденсация в помещении равны 0.
+  * Чистый баланс: $P_{\text{net}} = P_{\text{env}} + P_{\text{heating}}$, где $P_{\text{env}}$ учитывает теплопотери сквозь холодные стены ($P_{\text{wall}} < 0$).
+* **Переключатель режимов (Controls / Device Info)**:
+  * Прямо на странице устройства в Home Assistant доступна кнопка/селектор `select.thermal_balance_hvac_mode` с опциями: **Охлаждение (`cooling`)**, **Обогрев (`heating`)** и **Авто (`auto`)**.
 
 ### ⏱️ 4. Прогноз изменения температуры (Time to 1°C)
 Учитывает **термическую инерцию** воздуха и строительных конструкций/мебели:
 $$C_{\text{total}} = (0.336 \cdot V_{\text{room}}) + (A_{\text{floor}} \cdot 40.0)\text{ Вт·ч/К}$$
 $$\text{Time to 1°C} = \frac{C_{\text{total}}}{|P_{\text{net-sensible}}|} \cdot 60 \quad [\text{минут}]$$
 
-### 🧮 5. Эмпирический $K$-коэффициент ($HLC_{\text{empirical}}$) и Защита от Ошибок
-При установившейся работе кондиционера замеряется отношение съема тепла к дельте температур:
-$$K_{\text{instant}} = \frac{P_{\text{cooling-sensible}} - P_{\text{solar}}}{|T_{\text{in}} - T_{\text{out}}|}$$
-Для предотвращения искажений при охлаждении массы помещения и пуске компрессора $K_{\text{empirical}}$ строго ограничен физическим коридором:
+### 🧮 5. Эмпирический $K$-коэффициент ($HLC_{\text{empirical}}$) с Динамической Коррекцией $\frac{dT}{dt}$
+При нестационарных режимах (например, форсажный пуск кондиционера или быстрый нагрев комнаты) накопленная теплоемкость стен и мебели отдает или поглощает энергию:
+$$P_{\text{storage}} = C_{\text{total}} \cdot \frac{dT_{\text{in}}}{dt} \quad [\text{Вт}]$$
+где $\frac{dT_{\text{in}}}{dt}$ — сглаженная скорость изменения температуры ($^\circ\text{C}/\text{ч}$), вычисляемая методом линейной регрессии по скользящему 10-минутному окну.
+
+Уравнение истинного коэффициента теплопотерь $K_{\text{instant}}$:
+* **При охлаждении**: $K_{\text{instant}} = \frac{P_{\text{cooling-sensible}} - P_{\text{solar}} + P_{\text{storage}}}{|T_{\text{in}} - T_{\text{out}}|}$ (при быстром падении $T$, $P_{\text{storage}} < 0$ вычитает отдачу тепла стенами, исключая ложный скачок $K$).
+* **При обогреве**: $K_{\text{instant}} = \frac{P_{\text{heating}} + P_{\text{solar}} - P_{\text{storage}}}{|T_{\text{in}} - T_{\text{out}}|}$.
+
+Для максимальной надежности $K_{\text{empirical}}$ фильтруется экспоненциальным скользящим средним (EWMA) и ограничен физическим коридором:
 $$0.5 \cdot HLC_{\text{theoretical}} \le K_{\text{empirical}} \le 2.0 \cdot HLC_{\text{theoretical}}$$
 
 ---
 
-## 2. Инструкция по Установке и Настройке (Config Flow)
+---
 
-### Шаг 1. Добавление интеграции
-1. В Home Assistant перейдите в **Настройки** $\rightarrow$ **Устройства и службы** $\rightarrow$ **Добавить интеграцию**.
-2. Найдите **Thermal Balance**.
+## 2. Инструкция по Установке и Настройке (3-Шаговый Config Flow Wizard)
 
-### Шаг 2. Заполнение параметров помещения
+При добавлении интеграции мастер настройки разбит на **3 понятных последовательных шага**:
 
-| Поле в настройках | Описание | Значение по умолчанию | Рекомендации по выбору |
+### 📐 Шаг 1. Геометрия помещения и теплоизоляция
+
+| Поле в мастере | Описание | Значение по умолчанию | Рекомендации |
 | :--- | :--- | :--- | :--- |
 | **Room Area ($m^2$)** | Площадь пола комнаты | `20.0` | Укажите точную площадь комнаты. |
 | **Ceiling Height ($m$)** | Высота потолков | `2.7` | Высота от пола до потолка в метрах. |
 | **Window Area ($m^2$)** | Площадь остекления окон | `3.0` | Суммарная площадь всех окон в комнате. |
-| **External Walls Fraction** | Доля внешних стен | `0.25` | `0.25` — 1 стена из 4 выходят на улицу.<br>`0.50` — угловая комната (2 стены на улицу).<br>`1.00` — отдельно стоящий дом/павильон. |
-| **AC Max Cooling (W)** | Макс. холодопроизводительность | `3350.0` | Паспортная мощность охлаждения кондиционера (например, для 9-ки ~2600-3350 Вт). |
-| **AC Airflow ($m^3/h$)** | Прокачка воздуха | `370.0` | Расход воздуха внутреннего блока (обычно 250–500 м³/ч). |
-| **U Wall ($W/(m^2\cdot K)$)** | Коэффициент стен | `0.3` | `0.2-0.3` — новостройка / к/б панель с утеплителем.<br>`0.8-1.2` — старый кирпич / панель. |
+| **External Walls Fraction** | Доля внешних стен | `0.25` | `0.25` — 1 стена из 4 на улицу.<br>`0.50` — угловая комната (2 стены).<br>`1.00` — отдельный дом/павильон. |
+| **Window Azimuth (°)** | Азимут окна | `0.0` | 0°=Север, 90°=Восток, 180°=Юг, 270°=Запад. |
+| **U Wall ($W/(m^2\cdot K)$)** | Коэффициент стен | `0.3` | `0.2-0.3` — новостройка с утеплителем.<br>`0.8-1.2` — старый кирпич/панель. |
 | **U Window ($W/(m^2\cdot K)$)** | Коэффициент окон | `1.1` | `1.1` — 2-камерный стеклопакет.<br>`2.5-3.0` — старое деревянное окно. |
-| **Автокалибровка K-фактора** | Включение эмпирического K | `False` | Включите, чтобы модель подставляла реально измеренные утечки вместо паспорта. |
+| **Автокалибровка K-фактора** | Включение адаптивного K | `False` | Автоподстройка $K$-фактора по реальным замерам. |
 
-### Шаг 3. Привязка сенсоров Home Assistant
+### ❄️ Шаг 2. Оборудование, шторы и финансы
+
+| Поле в мастере | Описание | Значение по умолчанию | Рекомендации |
+| :--- | :--- | :--- | :--- |
+| **Default HVAC Mode** | Режим работы | `Cooling` | `Cooling` (лето), `Heating` (зима), `Auto` (по термостату/дельте). |
+| **AC Max Cooling (W)** | Макс. холодопроизводительность | `3350.0` | Паспортная мощность охлаждения сплит-системы. |
+| **AC Airflow ($m^3/h$)** | Прокачка воздуха | `370.0` | Расход воздуха внутреннего блока (250–500 м³/ч). |
+| **Curtain Type** | Тип зашторивания | `roller_gaps` | `blackout` (до 93% тепла), `roller_gaps` (74%), `standard` (71%), `blinds` (50%), `external` (100%). |
+| **Electricity Rate** | Тариф на электроэнергию | `4.32` | Стоимость за 1 кВт⋅ч (можно динамически менять через `number.*`). |
+| **Currency Symbol** | Символ валюты | `₴` / `₽` / `$` / `€` | Отображаемый знак валюты. |
+| **Illuminance Threshold (lx)** | Порог закрытия штор | `150.0` | Уровень освещенности для детекции закрытых штор. |
+
+### 🌡️ Шаг 3. Привязка сенсоров Home Assistant
 
 | Поле сенсора | Обязательный? | Описание |
 | :--- | :--- | :--- |
-| **Indoor Temperature Sensor** | **Да** | Датчик температуры внутри комнаты (`sensor.room_temperature`). |
-| **Outdoor Temperature Sensor** | **Да** | Датчик уличной температуры (`sensor.outdoor_temperature`). |
-| **AC Power Sensor** | **Да** | Датчик электрической мощности кондиционера в Ваттах (`sensor.ac_power`). |
-| **Solar Radiation Sensor** | **Да** | Датчик инсоляции Вт/м² (`sensor.solar_radiance` или интеграция метеослужбы). |
-| **Indoor Relative Humidity** | Опционально | Влажность в комнате RH% (нужна для точного расчета SHR и конденсата). |
-| **Outdoor Relative Humidity** | Опционально | Влажность на улице RH%. |
-| **AC Exit Temperature** | Опционально | Датчик температуры выдува из жалюзи кондиционера (для прямых замеров съема тепла). |
-| **Indoor Illuminance Sensor** | Опционально | Датчик освещенности в комнате (`sensor.room_lux`). Авто-определение зашторивания окон. |
-| **Window Binary Sensor** | Опционально | Датчик открытия окна (`binary_sensor.window_contact`). |
+| **Indoor Temperature** | **Да** | Датчик температуры внутри комнаты (`sensor.room_temperature`). |
+| **Outdoor Temperature** | **Да** | Датчик уличной температуры (`sensor.outdoor_temperature`). |
+| **AC Power Consumption** | **Да** | Датчик электрической мощности кондиционера в Ваттах (`sensor.ac_power`). |
+| **Solar Radiation** | Опционально | **Физический датчик инсоляции НЕ обязателен!** Если оставить пустым, интеграция автоматически рассчитывает инсоляцию по модели ясного неба (Haurwitz/ASHRAE Clear-Sky). |
+| **Weather Entity** | Опционально | Интеграция погоды (`weather.*`) — используется для учета облачности в модели инсоляции. |
+| **Climate Thermostat** | Опционально | Сущность климата (`climate.*`) для авто-определения режимов обогрев/охлаждение. |
+| **Window State** | Опционально | Геркон открытия окна (`binary_sensor.window_contact`). |
+| **Indoor Illuminance** | Опционально | Люксметр комнаты для авто-детекции закрытых штор днем. |
+| **AC Exit Temperature** | Опционально | Датчик температуры воздуха на выходе из жалюзи кондиционера. |
+| **Indoor / Outdoor Humidity** | Опционально | Датчики влажности RH% для расчета точки росы и конденсата. |
+| **Wind Speed / Direction** | Опционально | Сенсоры ветра для ветрового подпора при открытых окнах. |
+
+### 🔄 Перенастройка без пересоздания (Reconfigure)
+Интеграция полностью поддерживает стандарт **Home Assistant Gold Quality Scale (`async_step_reconfigure`)**. Вы можете в любой момент изменить площадь комнаты, характеристики стен или кондиционера в меню **Настройки** $\rightarrow$ **Устройства и службы** $\rightarrow$ **Thermal Balance** $\rightarrow$ **Перенастроить (Reconfigure)** без удаления и потери накопленной статистики!
 
 ---
 
 ## 3. Подробный Разбор Элементов Карточки (Dashboard Card)
 
-Карточка `custom:thermal-balance-card` автоматически строится в **2 адаптивные колонки**:
+### ⚙️ Конфигурация карточки в Lovelace
+
+```yaml
+type: custom:thermal-balance-card
+compact: true               # Включить компактный режим (для мобильных дашбордов)
+title: "Климат Спальни"     # Пользовательский заголовок (опционально)
+```
+
+### 🌟 Ключевые возможности UI:
+1. **🌐 Автоматическая локализация (i18n)**: Карточка автоматически определяет язык вашего профиля Home Assistant (`en` / `ru`) и переводит все элементы интерфейса, приборы, таблицы и подсказки.
+2. **📱 Компактный режим (`compact: true`)**: Одноколоночная оптимизированная верстка для экранов смартфонов с компактными приборами и адаптивным графиком тренда.
+3. **❄️🔥 Сезонная цветовая адаптация**: Автоматическая смена акцентной темы:
+   * **Летом (Cooling)**: Ледяной синий/бирюзовый неон (`#4DA3FF`, `#00D2FF`) с прохладным свечением.
+   * **Зимой (Heating / Тепловой насос)**: Уютный янтарно-огненный градиент (`#FF7A3C`, `#FF5722`) с теплым свечением рамок и графиков.
+
+---
+
+Карточка `custom:thermal-balance-card` в обычном режиме строится в **2 адаптивные колонки**:
 
 ```
 +------------------------------------------+------------------------------------------+
@@ -142,26 +189,79 @@ $$0.5 \cdot HLC_{\text{theoretical}} \le K_{\text{empirical}} \le 2.0 \cdot HLC_
 
 ---
 
-## 4. Сводная Таблица всех Сенсоров и Атрибутов
+## 4. Сводная Таблица всех Сущностей и Органов Управления
 
-| Имя сущности в HA | Название | Ед. изм. | Описание и Атрибуты |
+| Имя сущности в HA | Платформа | Ед. изм. | Описание и Назначение |
 | :--- | :--- | :--- | :--- |
-| `sensor.thermal_balance_instant_heat_gain` | Heat Gain | `W` | Мгновенный приток тепла.<br>Атрибуты: `p_solar_w`, `p_wall_w`, `p_vent_w`, `hlc_w_k`, `window_is_open`, `curtains_closed`, `curtains_state`, `illuminance_lux`, `g_solar_factor`. |
-| `sensor.thermal_balance_ac_heat_output` | AC Cooling | `W` | Мощность охлаждения.<br>Атрибуты: `delta_t_ac_c`, `ac_exit_temperature_c`, `sensible_cooling_w`, `latent_cooling_w`, `shr_percent`, `indoor_dew_point_c`, `outdoor_dew_point_c`, `air_enthalpy_in_kj_kg`. |
-| `sensor.thermal_balance_instant_net_balance` | Net Balance | `W` | Чистый тепловой баланс ($P_{\text{env}} - P_{\text{cooling}}$). |
-| `sensor.thermal_balance_ac_carnot_cop` | AC COP | — | Реальный коэффициент эффективности кондиционера. |
-| `sensor.thermal_balance_time_to_1deg` | Time to 1°C | `min` | Время изменения $T$ на 1°C.<br>Атрибуты: `direction`, `direction_text`. |
-| `sensor.thermal_balance_daily_thermal_balance` | Daily Balance | `kWh` | Суточный чистый энергобаланс. |
-| `sensor.thermal_balance_net_thermal_balance` | Total Balance | `kWh` | Накопительный баланс за все время. |
-| `sensor.thermal_balance_empirical_k_factor` | Empirical K-Factor | `W/K` | Реально измеренный $K$-коэффициент.<br>Атрибуты: `theoretical_hlc_w_k`, `active_hlc_w_k`, `deviation_percent`, `insulation_grade`, `auto_calibrated`, `samples_count`. |
-| `sensor.thermal_balance_ac_energy_cost` | AC Energy Cost | `₴` / `UAH` | Затраты на электроэнергию кондиционера за день.<br>Расчет: $E_{\text{elec}} \cdot \text{tariff}$. |
-| `sensor.thermal_balance_shading_daily_savings` | Shading Daily Savings | `₴` / `UAH` | Финансовая экономия от зашторивания в день.<br>Расчет: $(E_{\text{solar\_saved}} / \text{COP}) \cdot \text{tariff}$. |
-| `binary_sensor.thermal_balance_recommend_open_window` | Open Window Recommended | — | `on` если $T_{\text{out}} < T_{\text{in}} - 1^\circ\text{C}$ и окно закрыто.<br>Атрибуты: `advice`, `temp_difference_c`. |
-| `binary_sensor.thermal_balance_recommend_close_curtains` | Close Curtains Recommended | — | `on` если солнце $\ge 200\text{ Вт/м}^2$ и шторы открыты.<br>Атрибуты: `advice`, `solar_radiation_w_m2`, `potential_heat_reduction_w`, `potential_daily_savings`. |
+| `select.thermal_balance_hvac_mode` | `select` | — | **Режим работы в Controls**: `cooling` (Охлаждение), `heating` (Обогрев), `auto` (Автоматически). |
+| `select.thermal_balance_curtain_type` | `select` | — | **Тип штор в Controls**: `roller_gaps`, `blackout`, `standard`, `blinds`, `external`. |
+| `button.thermal_balance_reset_daily` | `button` | — | **Сброс суточных счетчиков**: мгновенный сброс суточных кВт⋅ч и затрат. |
+| `button.thermal_balance_reset_k_factor` | `button` | — | **Сброс калибровки $K$**: очистка выборки обучения для повторной автокалибровки. |
+| `number.thermal_balance_electricity_rate` | `number` | `₴/kWh` | **Тариф на электричество**: ввод цены за кВт⋅ч (поддерживает день/ночь автоматизации). |
+| `sensor.thermal_balance_equilibrium_temperature` | `sensor` | `°C` | **Равновесная температура**: пассивная температура комнаты без кондиционера ($T_{\text{eq}} = T_{\text{out}} + \frac{P_{\text{solar}}}{HLC}$). |
+| `sensor.thermal_balance_required_ac_power` | `sensor` | `W` | **Требуемая мощность AC**: мощность для поддержания комфортных 23°C. |
+| `sensor.thermal_balance_instant_heat_gain` | `sensor` | `W` | Мгновенный приток тепла.<br>Атрибуты: `p_solar_w`, `p_solar_direct_w`, `p_solar_diffuse_w`, `solar_aoi_deg`, `solar_cos_aoi`, `sun_is_direct_to_window`, `p_wall_w`, `p_vent_w`, `hlc_w_k`. |
+| `sensor.thermal_balance_ac_heat_output` | `sensor` | `W` | Мощность кондиционера (съем тепла при охлаждении или отдача при обогреве).<br>Атрибуты: `is_heating`, `hvac_mode`, `p_heating_w`, `p_cooling_w`, `shr_percent`, `delta_t_ac_c`. |
+| `sensor.thermal_balance_instant_net_balance` | `sensor` | `W` | Чистый тепловой баланс ($P_{\text{env}} - P_{\text{cooling}}$ или $P_{\text{env}} + P_{\text{heating}}$). |
+| `sensor.thermal_balance_ac_carnot_cop` | `sensor` | — | Реальный коэффициент эффективности кондиционера (EER / COP). |
+| `sensor.thermal_balance_time_to_1deg` | `sensor` | `min` | Время изменения $T$ на 1°C. |
+| `sensor.thermal_balance_daily_thermal_balance` | `sensor` | `kWh` | Суточный чистый энергобаланс. |
+| `sensor.thermal_balance_net_thermal_balance` | `sensor` | `kWh` | Накопительный баланс за все время. |
+| `sensor.thermal_balance_empirical_k_factor` | `sensor` | `W/K` | Реально измеренный $K$-коэффициент.<br>Атрибуты: `dt_dt_c_per_h`, `p_storage_w`, `p_wall_dynamic_w`. |
+| `sensor.thermal_balance_ac_energy_cost` | `sensor` | `₴` | Затраты на электроэнергию кондиционера за день. |
+| `sensor.thermal_balance_shading_daily_savings` | `sensor` | `₴` | Финансовая экономия от закрытия штор в день. |
+| `binary_sensor.thermal_balance_recommend_open_window` | `binary_sensor` | — | `on` если на улице прохладнее и выгодно открыть окно. |
+| `binary_sensor.thermal_balance_recommend_close_curtains` | `binary_sensor` | — | `on` при высоком солнце для экономии энергии. |
+| `binary_sensor.thermal_balance_insufficient_cooling_capacity` | `binary_sensor` | — | `on` при нехватке мощности кондиционера ($P_{\text{gain}} > P_{\text{ac\_max}}$). |
 
 ---
 
-## 5. Частые Вопросы и Диагностика (FAQ)
+## 5. Официальные Действия Интеграции (Services)
+
+Интеграция регистрирует в Home Assistant 3 действия:
+
+1. **`thermal_balance.reset_accumulators`**:
+   * Мгновенный сброс всех накопителей тепла, энергии и финансовой статистики.
+2. **`thermal_balance.recalibrate_k_factor`**:
+   * Сброс истории замеров автокалибровки $K$-фактора для переобучения интеграции под новые физические условия помещения.
+3. **`thermal_balance.calculate_cooling_needs`**:
+   * Вызов аналитического расчета с возвратом ответа (`ServiceResponse`):
+   ```yaml
+   action: thermal_balance.calculate_cooling_needs
+   data:
+     target_temperature: 23.0
+     outdoor_temperature: 34.0
+     solar_irradiance: 600.0
+     curtains_closed: true
+   response_variable: cooling_analysis
+   ```
+   * Возвращает переменные: `required_power_w`, `equilibrium_temperature_c`, `cooling_load_fraction`, `estimated_cop`, `estimated_elec_power_w`.
+
+---
+
+## 6. Тестирование и Соответствие Стандартам Home Assistant (Quality Scale)
+
+Интеграция протестирована и подготовлена для соответствия стандартам **Home Assistant Gold Quality Scale**:
+
+* **🧪 Автоматические тесты (`tests/`)**:
+  * `test_model.py`: 27 тестов термодинамических расчетов (AOI инсоляции, Haurwitz/ASHRAE Clear-Sky, динамический $K$-фактор с $dT/dt$, обогрев/охлаждение, психрометрия и вентиляция).
+  * `test_coordinator.py`: тесты координатора данных, авторасчета инсоляции, автодетекции штор по люксметру, сброса накопителей в полночь и интерактивных действий.
+  * `test_config_flow.py`: тестирование 3-шаговых мастеров Config Flow, Options Flow и Reconfiguration Flow.
+  * `test_diagnostics.py`: тестирование выгрузки и структуры диагностического дампа (`diagnostics.py`).
+  * Запуск всех тестов:
+    ```bash
+    python -m unittest discover -s tests -v
+    ```
+* **🤖 GitHub Actions CI/CD (`.github/workflows/test.yml`)**:
+  * Автоматический прогон полного набора тестов на Python 3.12 и 3.13 при каждом push/PR.
+  * Валидация интеграции через официальный `hacs/action`.
+* **🎨 Локализация иконок (`icons.json`)**:
+  * Соответствие правилу `icon-translations` для всех сущностей (`select`, `button`, `number`, `sensor`, `binary_sensor`) и действий (services).
+
+
+---
+
+## 7. Частые Вопросы и Диагностика (FAQ)
 
 ### ❓ Как работает авто-зашторивание?
 Днем, когда уличный датчик фиксирует солнце ($I_{\text{solar}} > 10\text{ Вт/м}^2$), а астрономическое солнце в HA находится над горизонтом (`sun.sun == 'above_horizon'`), интеграция опрашивает ваш комнатный датчик освещенности. Если в комнате меньше 150 люкс, система определяет закрытые шторы и урезает солнечный нагрев на 70%. Ночью комнатный свет игнорируется.

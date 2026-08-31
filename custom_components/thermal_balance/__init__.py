@@ -3,21 +3,133 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import Any
+
+import voluptuous as vol
 
 from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import (
+    HomeAssistant,
+    ServiceCall,
+    ServiceResponse,
+    SupportsResponse,
+)
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.typing import ConfigType
 
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    SERVICE_CALCULATE_COOLING_NEEDS,
+    SERVICE_RECALIBRATE_K_FACTOR,
+    SERVICE_RESET_ACCUMULATORS,
+)
 from .coordinator import ThermalBalanceCoordinator
+from .model import RoomGeometry
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.BINARY_SENSOR,
+    Platform.SELECT,
+    Platform.BUTTON,
+    Platform.NUMBER,
+]
 
 # Track whether the frontend card has been registered (once per HA session)
 _FRONTEND_REGISTERED = False
+
+RESET_SCHEMA = vol.Schema({
+    vol.Optional("entry_id"): cv.string,
+})
+
+CALCULATE_NEEDS_SCHEMA = vol.Schema({
+    vol.Optional("entry_id"): cv.string,
+    vol.Optional("target_temperature", default=23.0): vol.Coerce(float),
+    vol.Optional("outdoor_temperature"): vol.Coerce(float),
+    vol.Optional("solar_irradiance"): vol.Coerce(float),
+    vol.Optional("curtains_closed", default=False): cv.boolean,
+})
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Thermal Balance component services."""
+
+    def _get_coordinators(call: ServiceCall) -> list[ThermalBalanceCoordinator]:
+        entry_id = call.data.get("entry_id")
+        coordinators: list[ThermalBalanceCoordinator] = []
+        for entry in hass.config_entries.async_entries(DOMAIN):
+            if hasattr(entry, "runtime_data") and isinstance(entry.runtime_data, ThermalBalanceCoordinator):
+                if not entry_id or entry.entry_id == entry_id:
+                    coordinators.append(entry.runtime_data)
+        return coordinators
+
+    async def handle_reset_accumulators(call: ServiceCall) -> None:
+        coordinators = _get_coordinators(call)
+        for coord in coordinators:
+            await coord.async_reset_accumulators()
+
+    async def handle_recalibrate_k_factor(call: ServiceCall) -> None:
+        coordinators = _get_coordinators(call)
+        for coord in coordinators:
+            await coord.async_reset_k_factor()
+
+    async def handle_calculate_cooling_needs(call: ServiceCall) -> ServiceResponse:
+        coordinators = _get_coordinators(call)
+        coord = coordinators[0] if coordinators else None
+
+        t_target = float(call.data.get("target_temperature", 23.0))
+        t_out = float(call.data["outdoor_temperature"]) if "outdoor_temperature" in call.data else (coord.t_out_val if coord else 30.0)
+        solar = float(call.data["solar_irradiance"]) if "solar_irradiance" in call.data else (coord.solar_val if coord else 400.0)
+        curtains_closed = bool(call.data.get("curtains_closed", False))
+
+        geometry = coord.geometry if coord else RoomGeometry(20.0, 2.7, 3.0, 0.25, 0.3, 1.1)
+        hlc = coord.hlc_closed if coord else geometry.hlc_theoretical
+
+        curtain_g = 0.25 if curtains_closed else 0.70
+        p_solar = geometry.window_area * solar * curtain_g
+        p_wall = max(0.0, hlc * (t_out - t_target))
+        p_req = p_wall + p_solar
+        t_eq = t_out + (p_solar / max(0.5, hlc))
+
+        ac_max = coord.ac_max_cooling if coord else 3350.0
+        load_fraction = min(1.0, p_req / max(100.0, ac_max))
+
+        delta_t_carnot = max(1.0, t_out - t_target)
+        cop_est = max(1.5, min(5.0, ((t_target + 273.15) / delta_t_carnot) * 0.38))
+        elec_power = p_req / cop_est if cop_est > 0 else 0.0
+
+        return {
+            "required_power_w": round(p_req, 1),
+            "equilibrium_temperature_c": round(t_eq, 1),
+            "cooling_load_fraction": round(load_fraction, 2),
+            "estimated_cop": round(cop_est, 2),
+            "estimated_elec_power_w": round(elec_power, 1),
+        }
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESET_ACCUMULATORS,
+        handle_reset_accumulators,
+        schema=RESET_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RECALIBRATE_K_FACTOR,
+        handle_recalibrate_k_factor,
+        schema=RESET_SCHEMA,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CALCULATE_COOLING_NEEDS,
+        handle_calculate_cooling_needs,
+        schema=CALCULATE_NEEDS_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

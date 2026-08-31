@@ -1,0 +1,65 @@
+reset_accumulators:
+  name: Reset Accumulators
+  description: Immediately reset daily and total energy, heat absorption, and financial accumulators.
+  fields:
+    entry_id:
+      name: Config Entry ID
+      description: Specific Thermal Balance entry ID to reset (leave empty to reset all instances).
+      selector:
+        text:
+
+recalibrate_k_factor:
+  name: Recalibrate K-Factor
+  description: Clear empirical K-factor historical learning samples to retrain insulation calibration.
+  fields:
+    entry_id:
+      name: Config Entry ID
+      description: Specific Thermal Balance entry ID to reset (leave empty to reset all instances).
+      selector:
+        text:
+
+calculate_cooling_needs:
+  name: Calculate Cooling Needs
+  description: Calculate thermal power needs, equilibrium temperature, and estimated electrical consumption.
+  response:
+    optional: true
+  fields:
+    entry_id:
+      name: Config Entry ID
+      description: Optional Thermal Balance entry ID to use room geometry.
+      selector:
+        text:
+    target_temperature:
+      name: Target Temperature
+      description: Desired indoor temperature in °C.
+      default: 23.0
+      selector:
+        number:
+          min: 16.0
+          max: 30.0
+          step: 0.5
+          unit_of_measurement: "°C"
+    outdoor_temperature:
+      name: Outdoor Temperature
+      description: Outdoor ambient temperature in °C (defaults to live outdoor reading).
+      selector:
+        number:
+          min: -30.0
+          max: 55.0
+          step: 0.5
+          unit_of_measurement: "°C"
+    solar_irradiance:
+      name: Solar Irradiance
+      description: Outdoor solar radiation in W/m² (defaults to live solar reading).
+      selector:
+        number:
+          min: 0.0
+          max: 1200.0
+          step: 10.0
+          unit_of_measurement: "W/m²"
+    curtains_closed:
+      name: Curtains Closed
+      description: Whether window curtains or blinds are closed.
+      default: false
+      selector:
+        boolean:

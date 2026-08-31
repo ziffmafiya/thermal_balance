@@ -32,6 +32,10 @@ CONF_ELECTRICITY_RATE: Final = "electricity_rate"
 CONF_CURRENCY_SYMBOL: Final = "currency_symbol"
 CONF_CURTAIN_TYPE: Final = "curtain_type"
 
+CONF_SENSOR_CLIMATE: Final = "sensor_climate"
+CONF_SENSOR_WEATHER: Final = "sensor_weather"
+CONF_HVAC_MODE: Final = "hvac_mode"
+
 # Defaults
 DEFAULT_U_WALL: Final = 0.3
 DEFAULT_U_WINDOW: Final = 1.1
@@ -47,6 +51,25 @@ DEFAULT_ELECTRICITY_RATE: Final = 4.32
 DEFAULT_CURRENCY_SYMBOL: Final = "₴"
 DEFAULT_WINDOW_AZIMUTH: Final = 0.0
 DEFAULT_CURTAIN_TYPE: Final = "roller_gaps"
+DEFAULT_HVAC_MODE: Final = "cooling"
+
+# HVAC Modes
+HVAC_MODE_COOLING: Final = "cooling"
+HVAC_MODE_HEATING: Final = "heating"
+HVAC_MODE_AUTO: Final = "auto"
+HVAC_MODES: Final = [HVAC_MODE_COOLING, HVAC_MODE_HEATING, HVAC_MODE_AUTO]
+
+# Select keys and options
+SELECT_HVAC_MODE: Final = "hvac_mode"
+SELECT_CURTAIN_TYPE: Final = "curtain_type"
+CURTAIN_TYPES: Final = ["roller_gaps", "blackout", "standard", "blinds", "external"]
+
+# Button keys
+BUTTON_RESET_DAILY: Final = "reset_daily"
+BUTTON_RESET_K_FACTOR: Final = "reset_k_factor"
+
+# Number keys
+NUMBER_ELECTRICITY_RATE: Final = "electricity_rate"
 
 # Sensor keys
 SENSOR_INSTANT_HEAT_GAIN: Final = "instant_heat_gain"
@@ -60,6 +83,8 @@ SENSOR_TOTAL_HEAT_ABSORBED: Final = "total_heat_absorbed"
 SENSOR_AC_THERMAL_ENERGY_TOTAL: Final = "ac_thermal_energy_total"
 SENSOR_AC_CONDENSATION_RATE: Final = "ac_condensation_rate"
 SENSOR_EMPIRICAL_K_FACTOR: Final = "empirical_k_factor"
+SENSOR_EQUILIBRIUM_TEMPERATURE: Final = "equilibrium_temperature"
+SENSOR_REQUIRED_AC_POWER: Final = "required_ac_power"
 
 SENSOR_AC_ENERGY_COST: Final = "ac_energy_cost"
 SENSOR_SHADING_DAILY_SAVINGS: Final = "shading_daily_savings"
@@ -67,3 +92,9 @@ SENSOR_SHADING_DAILY_SAVINGS: Final = "shading_daily_savings"
 # Binary sensor keys
 BINARY_SENSOR_RECOMMEND_OPEN_WINDOW: Final = "recommend_open_window"
 BINARY_SENSOR_RECOMMEND_CLOSE_CURTAINS: Final = "recommend_close_curtains"
+BINARY_SENSOR_INSUFFICIENT_COOLING_CAPACITY: Final = "insufficient_cooling_capacity"
+
+# Service names
+SERVICE_RESET_ACCUMULATORS: Final = "reset_accumulators"
+SERVICE_RECALIBRATE_K_FACTOR: Final = "recalibrate_k_factor"
+SERVICE_CALCULATE_COOLING_NEEDS: Final = "calculate_cooling_needs"
