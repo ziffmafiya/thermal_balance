@@ -7,7 +7,40 @@ from enum import StrEnum
 from types import ModuleType
 from typing import Any, Callable
 from unittest.mock import MagicMock
-import voluptuous as vol
+try:
+    import voluptuous as vol
+except ImportError:
+    class MockVol:
+        class Schema:
+            def __init__(self, schema: Any = None) -> None:
+                self.schema = schema
+
+            def __call__(self, data: Any) -> Any:
+                return data
+
+        class Required:
+            def __init__(self, key: Any, default: Any = None, description: Any = None) -> None:
+                self.key = key
+                self.default = default
+
+        class Optional:
+            def __init__(self, key: Any, default: Any = None, description: Any = None) -> None:
+                self.key = key
+                self.default = default
+
+        class Coerce:
+            def __init__(self, type_fn: Any) -> None:
+                self.type_fn = type_fn
+
+            def __call__(self, v: Any) -> Any:
+                return self.type_fn(v)
+
+        class error:
+            class SchemaError(Exception):
+                pass
+
+    vol = MockVol()
+    sys.modules["voluptuous"] = vol
 
 
 class MockState:
