@@ -18,6 +18,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     DOMAIN,
@@ -253,21 +254,38 @@ class ThermalBalanceSensor(CoordinatorEntity[ThermalBalanceCoordinator], Restore
             if last_state is not None and last_state.state not in ("unknown", "unavailable"):
                 try:
                     restored_val = float(last_state.state)
+
+                    # Determine if last_state was updated on the current calendar day
+                    now_date = dt_util.now().date()
+                    is_same_day = False
+                    if hasattr(last_state, "last_updated") and last_state.last_updated is not None:
+                        last_updated = last_state.last_updated
+                        tz = getattr(dt_util, "DEFAULT_TIME_ZONE", None)
+                        if tz and hasattr(last_updated, "astimezone"):
+                            is_same_day = (last_updated.astimezone(tz).date() == now_date)
+                        elif hasattr(last_updated, "date"):
+                            is_same_day = (last_updated.date() == now_date)
+
                     if self.entity_description.key == SENSOR_TOTAL_HEAT_ABSORBED:
                         self.coordinator.total_heat_absorbed = restored_val
                     elif self.entity_description.key == SENSOR_AC_THERMAL_ENERGY_TOTAL:
                         self.coordinator.ac_thermal_energy_total = restored_val
                     elif self.entity_description.key == SENSOR_EMPIRICAL_K_FACTOR:
                         self.coordinator.empirical_k_val = restored_val
-                    elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE and last_state.attributes:
-                        if "daily_heat_absorbed" in last_state.attributes:
-                            self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
-                        if "daily_ac_thermal_energy" in last_state.attributes:
-                            self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
-                        if "daily_ac_elec_kwh" in last_state.attributes:
-                            self.coordinator.daily_ac_elec_kwh = float(last_state.attributes["daily_ac_elec_kwh"])
-                        if "daily_shading_heat_saved_kwh" in last_state.attributes:
-                            self.coordinator.daily_shading_heat_saved_kwh = float(last_state.attributes["daily_shading_heat_saved_kwh"])
+                    elif self.entity_description.key == SENSOR_DAILY_THERMAL_BALANCE:
+                        if is_same_day and last_state.attributes:
+                            if "daily_heat_absorbed" in last_state.attributes:
+                                self.coordinator.daily_heat_absorbed = float(last_state.attributes["daily_heat_absorbed"])
+                            if "daily_ac_thermal_energy" in last_state.attributes:
+                                self.coordinator.daily_ac_thermal_energy = float(last_state.attributes["daily_ac_thermal_energy"])
+                            if "daily_ac_elec_kwh" in last_state.attributes:
+                                self.coordinator.daily_ac_elec_kwh = float(last_state.attributes["daily_ac_elec_kwh"])
+                            if "daily_shading_heat_saved_kwh" in last_state.attributes:
+                                self.coordinator.daily_shading_heat_saved_kwh = float(last_state.attributes["daily_shading_heat_saved_kwh"])
+                        else:
+                            _LOGGER.debug("Daily thermal balance from previous day discarded on boot")
+
                     _LOGGER.debug("Restored %s = %f", self.entity_description.key, restored_val)
+                    self.coordinator.recalculate()
                 except (ValueError, TypeError):
                     pass

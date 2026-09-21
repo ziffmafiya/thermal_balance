@@ -143,6 +143,16 @@ const SENSOR_MAP = {
   rec_close_curtains: ['_recommend_close_curtains'],
 };
 
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function loadECharts() {
   if (window.echarts) return Promise.resolve(window.echarts);
   if (window._echartsLoadingPromise) return window._echartsLoadingPromise;
@@ -281,16 +291,16 @@ class ThermalBalanceCardEditor extends HTMLElement {
       const autoLabel = getAutoLabel(f.key);
 
       const options = [
-        `<option value="" ${currentVal === '' ? 'selected' : ''}>Auto (${autoLabel})</option>`,
+        `<option value="" ${currentVal === '' ? 'selected' : ''}>Auto (${escapeHtml(autoLabel)})</option>`,
         ...sensorEntities.map(e =>
-          `<option value="${e.eid}" ${currentVal === e.eid ? 'selected' : ''}>${e.name}</option>`
+          `<option value="${escapeHtml(e.eid)}" ${currentVal === e.eid ? 'selected' : ''}>${escapeHtml(e.name)}</option>`
         )
       ].join('');
 
       return `
         <div class="editor-row">
-          <label class="editor-label">${f.label}</label>
-          <select class="editor-select" configValue="${f.key}">
+          <label class="editor-label">${escapeHtml(f.label)}</label>
+          <select class="editor-select" configValue="${escapeHtml(f.key)}">
             ${options}
           </select>
         </div>
@@ -360,7 +370,7 @@ class ThermalBalanceCardEditor extends HTMLElement {
 
         <div class="editor-row">
           <label class="editor-label">${this._t('card_title_label')}</label>
-          <input type="text" class="editor-input" configValue="title" value="${this._config.title || ''}" placeholder="Thermal Balance"/>
+          <input type="text" class="editor-input" configValue="title" value="${escapeHtml(this._config.title || '')}" placeholder="Thermal Balance"/>
         </div>
 
         ${fieldsHtml}
@@ -392,6 +402,11 @@ class ThermalBalanceCard extends HTMLElement {
     this._hass = null;
     this._config = {};
     this._lastHash = '';
+    this._chart = null;
+    this._resizeObserver = null;
+    this._onWindowResize = null;
+    this._scaffoldCreated = false;
+    this._els = {};
   }
 
   static getConfigElement() {
@@ -415,7 +430,45 @@ class ThermalBalanceCard extends HTMLElement {
   }
 
   connectedCallback() {
+    if (!this._onWindowResize) {
+      this._onWindowResize = () => {
+        if (this._chart && !this._chart.isDisposed()) {
+          this._chart.resize();
+        }
+      };
+      window.addEventListener('resize', this._onWindowResize);
+    }
     this._render();
+  }
+
+  disconnectedCallback() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
+    if (this._onWindowResize) {
+      window.removeEventListener('resize', this._onWindowResize);
+      this._onWindowResize = null;
+    }
+    if (this._chart && !this._chart.isDisposed()) {
+      try {
+        this._chart.dispose();
+      } catch (e) {}
+      this._chart = null;
+    }
+  }
+
+  _setupResizeObserver() {
+    if (this._resizeObserver) return;
+    const container = this.shadowRoot ? this.shadowRoot.querySelector('.tb-card') : null;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    this._resizeObserver = new ResizeObserver(() => {
+      if (this._chart && !this._chart.isDisposed()) {
+        this._chart.resize();
+      }
+    });
+    this._resizeObserver.observe(container);
   }
 
   getCardSize() {
@@ -506,8 +559,8 @@ class ThermalBalanceCard extends HTMLElement {
     const gradId = `grad-${label.replace(/[^a-zA-Z0-9]/g, '')}`;
 
     return `
-      <div class="gauge-card">
-        <svg viewBox="0 0 140 85" class="gauge-svg">
+      <div class="gauge-card" role="group" aria-label="${escapeHtml(label)}: ${display} W">
+        <svg viewBox="0 0 140 85" class="gauge-svg" role="img" aria-label="${escapeHtml(label)}: ${display} W">
           <defs>
             <linearGradient id="${gradId}" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="${color1}"/>
@@ -515,17 +568,17 @@ class ThermalBalanceCard extends HTMLElement {
             </linearGradient>
           </defs>
           <path d="M 15 72 A 55 55 0 0 1 125 72"
-                fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" stroke-linecap="round"/>
+                fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" stroke-linecap="round" aria-hidden="true"/>
           <path d="M 15 72 A 55 55 0 0 1 125 72"
                 fill="none" stroke="url(#${gradId})" stroke-width="8" stroke-linecap="round"
                 stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"
-                style="transition: stroke-dashoffset 0.8s ease"/>
+                style="transition: stroke-dashoffset 0.8s ease" aria-hidden="true"/>
           <text x="70" y="58" text-anchor="middle" fill="#E5E7EB" font-size="22" font-weight="700" font-family="inherit">${display}</text>
-          <text x="70" y="74" text-anchor="middle" fill="#6B7280" font-size="11" font-family="inherit">W</text>
+          <text x="70" y="74" text-anchor="middle" fill="#9CA3AF" font-size="11" font-weight="600" font-family="inherit">W</text>
         </svg>
         <div class="gauge-label">
-          <span class="gauge-icon">${iconSvg}</span>
-          <span>${label}</span>
+          <span class="gauge-icon" aria-hidden="true">${iconSvg}</span>
+          <span>${escapeHtml(label)}</span>
         </div>
       </div>`;
   }
@@ -721,11 +774,17 @@ class ThermalBalanceCard extends HTMLElement {
     if (!container) return;
 
     loadECharts().then(echarts => {
-      if (!this.shadowRoot || !this.shadowRoot.querySelector('#echart-container')) return;
-      if (this._chart && !this._chart.isDisposed()) {
-        try { this._chart.dispose(); } catch(e){}
+      if (!this.shadowRoot) return;
+      const currentContainer = this.shadowRoot.querySelector('#echart-container');
+      if (!currentContainer) return;
+
+      const existingChart = echarts.getInstanceByDom(currentContainer);
+      if (!this._chart || this._chart.isDisposed() || existingChart !== this._chart) {
+        if (this._chart && !this._chart.isDisposed()) {
+          try { this._chart.dispose(); } catch(e){}
+        }
+        this._chart = echarts.init(currentContainer, null, { renderer: 'canvas' });
       }
-      this._chart = echarts.init(container, null, { renderer: 'canvas' });
 
       const numPoints = 288;
       const heatPoints = this._getTrendPoints('heat_gain', this._getState('heat_gain'), numPoints);
@@ -753,7 +812,7 @@ class ThermalBalanceCard extends HTMLElement {
           show: true,
           top: 0,
           right: 10,
-          textStyle: { color: '#9CA3AF', fontSize: 10 },
+          textStyle: { color: '#D1D5DB', fontSize: 10 },
           itemWidth: 10,
           itemHeight: 6,
           data: [this._t('heat'), hvacSeriesName, this._t('net')]
@@ -766,7 +825,7 @@ class ThermalBalanceCard extends HTMLElement {
           padding: [8, 12],
           textStyle: { color: '#E5E7EB', fontSize: 11 },
           formatter: (params) => {
-            let res = `<div style="font-weight:600;margin-bottom:4px;color:#9CA3AF">${params[0].name}</div>`;
+            let res = `<div style="font-weight:600;margin-bottom:4px;color:#D1D5DB">${params[0].name}</div>`;
             params.forEach(p => {
               const sign = p.value > 0 ? '+' : '';
               res += `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
@@ -788,13 +847,13 @@ class ThermalBalanceCard extends HTMLElement {
           boundaryGap: false,
           data: timeLabels,
           axisLine: { lineStyle: { color: '#233045' } },
-          axisLabel: { color: '#6B7280', fontSize: 10, interval: 35 },
+          axisLabel: { color: '#9CA3AF', fontSize: 10, interval: 35 },
           splitLine: { show: false }
         },
         yAxis: {
           type: 'value',
           axisLine: { show: false },
-          axisLabel: { color: '#6B7280', fontSize: 10, formatter: '{value} W' },
+          axisLabel: { color: '#9CA3AF', fontSize: 10, formatter: '{value} W' },
           splitLine: { lineStyle: { color: '#1C2538' } }
         },
         series: [
@@ -865,6 +924,319 @@ class ThermalBalanceCard extends HTMLElement {
 
   /* ─── Render ─── */
 
+  _createScaffold() {
+    this.shadowRoot.innerHTML = `
+      <style>${this._css()}</style>
+      <ha-card id="tb-ha-card" class="cooling-theme">
+        <div class="tb-card">
+          <div id="tb-advice-container" role="region" aria-live="polite" aria-atomic="true"></div>
+          <div class="card-layout">
+            <!-- COLUMN 1 -->
+            <div class="card-col col-left">
+              <!-- HEADER -->
+              <div class="header">
+                <div class="header-left">
+                  <div class="header-icon" aria-hidden="true">${this._icons.thermo}</div>
+                  <div class="header-text">
+                    <div class="header-title" id="tb-header-title">Thermal Balance</div>
+                    <div class="header-sub" id="tb-header-sub"></div>
+                  </div>
+                </div>
+                <div class="header-badge" id="tb-header-badge" role="status" style="background:var(--tb-theme-badge-bg); color:var(--tb-theme-accent); border:1px solid var(--tb-theme-border);">
+                  — W
+                </div>
+              </div>
+
+              <!-- GAUGES -->
+              <div class="gauges-row">
+                <div class="gauge-card" role="group" aria-labelledby="tb-gauge-heat-label">
+                  <svg viewBox="0 0 140 85" class="gauge-svg" role="img" id="tb-gauge-heat-svg" aria-label="Heat Gain: — W">
+                    <defs>
+                      <linearGradient id="tb-grad-heat" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop id="tb-grad-heat-stop1" offset="0%" stop-color="#FF7A3C"/>
+                        <stop id="tb-grad-heat-stop2" offset="100%" stop-color="#FFB199"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M 15 72 A 55 55 0 0 1 125 72" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" stroke-linecap="round" aria-hidden="true"/>
+                    <path id="tb-gauge-heat-path" d="M 15 72 A 55 55 0 0 1 125 72" fill="none" stroke="url(#tb-grad-heat)" stroke-width="8" stroke-linecap="round" stroke-dasharray="172.7876" stroke-dashoffset="172.7876" style="transition: stroke-dashoffset 0.8s ease" aria-hidden="true"/>
+                    <text id="tb-gauge-heat-val" x="70" y="58" text-anchor="middle" fill="#E5E7EB" font-size="22" font-weight="700" font-family="inherit">—</text>
+                    <text x="70" y="74" text-anchor="middle" fill="#9CA3AF" font-size="11" font-weight="600" font-family="inherit">W</text>
+                  </svg>
+                  <div class="gauge-label" id="tb-gauge-heat-label">
+                    <span class="gauge-icon" id="tb-gauge-heat-icon" aria-hidden="true">${this._icons.sun}</span>
+                    <span id="tb-gauge-heat-label-text"></span>
+                  </div>
+                </div>
+
+                <div class="gauge-card" role="group" aria-labelledby="tb-gauge-ac-label">
+                  <svg viewBox="0 0 140 85" class="gauge-svg" role="img" id="tb-gauge-ac-svg" aria-label="AC Cooling: — W">
+                    <defs>
+                      <linearGradient id="tb-grad-ac" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop id="tb-grad-ac-stop1" offset="0%" stop-color="#4DA3FF"/>
+                        <stop id="tb-grad-ac-stop2" offset="100%" stop-color="#93C5FD"/>
+                      </linearGradient>
+                    </defs>
+                    <path d="M 15 72 A 55 55 0 0 1 125 72" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8" stroke-linecap="round" aria-hidden="true"/>
+                    <path id="tb-gauge-ac-path" d="M 15 72 A 55 55 0 0 1 125 72" fill="none" stroke="url(#tb-grad-ac)" stroke-width="8" stroke-linecap="round" stroke-dasharray="172.7876" stroke-dashoffset="172.7876" style="transition: stroke-dashoffset 0.8s ease" aria-hidden="true"/>
+                    <text id="tb-gauge-ac-val" x="70" y="58" text-anchor="middle" fill="#E5E7EB" font-size="22" font-weight="700" font-family="inherit">—</text>
+                    <text x="70" y="74" text-anchor="middle" fill="#9CA3AF" font-size="11" font-weight="600" font-family="inherit">W</text>
+                  </svg>
+                  <div class="gauge-label" id="tb-gauge-ac-label">
+                    <span class="gauge-icon" id="tb-gauge-ac-icon" aria-hidden="true">${this._icons.snowflake}</span>
+                    <span id="tb-gauge-ac-label-text"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- METRICS BAR -->
+              <div class="metrics-bar" role="list">
+                <div class="metric-block" role="listitem" id="tb-metric-net-block">
+                  <div class="metric-icon" style="color:var(--tb-theme-accent)" aria-hidden="true">⚡</div>
+                  <div class="metric-val" id="tb-metric-net-val" style="color:var(--tb-theme-accent)">— <span class="metric-unit">W</span></div>
+                  <div class="metric-label" id="tb-metric-net-lbl"></div>
+                </div>
+                <div class="metric-block" role="listitem" id="tb-metric-vent-block">
+                  <div class="metric-icon" id="tb-metric-vent-icon" aria-hidden="true">🪟</div>
+                  <div class="metric-val" id="tb-metric-vent-val">—</div>
+                  <div class="metric-label" id="tb-metric-vent-lbl"></div>
+                </div>
+                <div class="metric-block" role="listitem" id="tb-metric-time-block">
+                  <div class="metric-icon" id="tb-metric-time-icon" style="color:#FACC15" aria-hidden="true">⚖</div>
+                  <div class="metric-val" id="tb-metric-time-val" style="color:#FACC15">—</div>
+                  <div class="metric-label" id="tb-metric-time-lbl"></div>
+                </div>
+                <div class="metric-block" role="listitem" id="tb-metric-cond-block">
+                  <div class="metric-icon" style="color:#93C5FD" aria-hidden="true">💧</div>
+                  <div class="metric-val" id="tb-metric-cond-val" style="color:#93C5FD">— <span class="metric-unit">L/h</span></div>
+                  <div class="metric-label" id="tb-metric-cond-lbl"></div>
+                </div>
+              </div>
+
+              <!-- VENTILATION & THERMAL SOURCES -->
+              <div class="section">
+                <div class="section-title">🪟 <span id="tb-sec-vent-title"></span></div>
+                <div class="ac-grid" id="tb-sec-vent-grid">
+                  <div class="ac-row">
+                    <span class="ac-dot" id="tb-vrow-win-dot"></span>
+                    <span class="ac-label" id="tb-vrow-win-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-win-val"></span>
+                  </div>
+                  <div class="ac-row">
+                    <span class="ac-dot" id="tb-vrow-vent-dot"></span>
+                    <span class="ac-label" id="tb-vrow-vent-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-vent-val"></span>
+                  </div>
+                  <div class="ac-row" id="tb-vrow-wind-row" style="display:none">
+                    <span class="ac-dot" style="background:#60A5FA"></span>
+                    <span class="ac-label" id="tb-vrow-wind-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-wind-val" style="color:#60A5FA"></span>
+                  </div>
+                  <div class="ac-row" id="tb-vrow-ach-row" style="display:none">
+                    <span class="ac-dot" style="background:#34D399"></span>
+                    <span class="ac-label" id="tb-vrow-ach-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-ach-val" style="color:#34D399"></span>
+                  </div>
+                  <div class="ac-row" id="tb-vrow-curtains-row" style="display:none">
+                    <span class="ac-dot" id="tb-vrow-curtains-dot"></span>
+                    <span class="ac-label" id="tb-vrow-curtains-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-curtains-val"></span>
+                  </div>
+                  <div class="curtains-note" id="tb-vrow-curtains-note" style="display:none"></div>
+                  <div class="ac-row">
+                    <span class="ac-dot" style="background:#FACC15"></span>
+                    <span class="ac-label" id="tb-vrow-solar-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-solar-val"></span>
+                  </div>
+                  <div class="ac-row">
+                    <span class="ac-dot" style="background:#8B5CF6"></span>
+                    <span class="ac-label" id="tb-vrow-wall-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-wall-val"></span>
+                  </div>
+                  <div class="ac-row">
+                    <span class="ac-dot" style="background:#00C896"></span>
+                    <span class="ac-label" id="tb-vrow-k-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-k-val" style="color:#00C896"></span>
+                  </div>
+                  <div class="ac-row">
+                    <span class="ac-dot" style="background:#3B82F6"></span>
+                    <span class="ac-label" id="tb-vrow-insul-lbl"></span>
+                    <span class="ac-val" id="tb-vrow-insul-val" style="font-size: 0.85em; color: #9CA3AF;"></span>
+                  </div>
+                  <div class="curtains-note" id="tb-vrow-win-k-note" style="display:none"></div>
+                </div>
+              </div>
+
+              <!-- AC PERFORMANCE -->
+              <div class="section">
+                <div class="section-title"><span id="tb-sec-ac-icon"></span> <span id="tb-sec-ac-title"></span></div>
+                <div class="ac-grid" id="tb-sec-ac-grid"></div>
+              </div>
+            </div>
+
+            <!-- COLUMN 2 -->
+            <div class="card-col col-right">
+              <!-- 24H ECHARTS TREND -->
+              <div class="section" style="flex: 1; display: flex; flex-direction: column;">
+                <div class="section-title">
+                  ${this._icons.trend}
+                  <span id="tb-trend-title"></span>
+                  <div class="trend-legend">
+                    <span class="legend-item"><span class="legend-dot" style="background:#FF7A3C"></span><span id="tb-trend-heat-lbl"></span></span>
+                    <span class="legend-item"><span class="legend-dot" id="tb-trend-hvac-dot" style="background:#4DA3FF"></span><span id="tb-trend-hvac-lbl"></span></span>
+                  </div>
+                </div>
+                <div id="echart-container" style="width: 100%; flex: 1; min-height: 150px; margin-top: 4px;"></div>
+              </div>
+
+              <!-- ENERGY & COSTS -->
+              <div class="section">
+                <div class="section-title">${this._icons.bolt} <span id="tb-sec-energy-title"></span></div>
+                <div class="energy-grid" role="list">
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" id="tb-ecard-daily-icon" style="color:#00C896" aria-hidden="true">📅</div>
+                    <div class="energy-val" id="tb-ecard-daily-val" style="color:#00C896">—</div>
+                    <div class="energy-unit">kWh</div>
+                    <div class="energy-label" id="tb-ecard-daily-lbl"></div>
+                  </div>
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" style="color:#8B5CF6" aria-hidden="true">Σ</div>
+                    <div class="energy-val" id="tb-ecard-total-val" style="color:#8B5CF6">—</div>
+                    <div class="energy-unit">kWh</div>
+                    <div class="energy-label" id="tb-ecard-total-lbl"></div>
+                  </div>
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" style="color:#FF7A3C" aria-hidden="true">🔥</div>
+                    <div class="energy-val" id="tb-ecard-heat-val" style="color:#FF7A3C">—</div>
+                    <div class="energy-unit">kWh</div>
+                    <div class="energy-label" id="tb-ecard-heat-lbl"></div>
+                  </div>
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" id="tb-ecard-ac-icon" style="color:#4DA3FF" aria-hidden="true">❄</div>
+                    <div class="energy-val" id="tb-ecard-ac-val" style="color:#4DA3FF">—</div>
+                    <div class="energy-unit">kWh</div>
+                    <div class="energy-label" id="tb-ecard-ac-lbl"></div>
+                  </div>
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" style="color:#FACC15" aria-hidden="true">💰</div>
+                    <div class="energy-val" id="tb-ecard-cost-val" style="color:#FACC15">—</div>
+                    <div class="energy-unit" id="tb-ecard-cost-unit"></div>
+                    <div class="energy-label" id="tb-ecard-cost-lbl"></div>
+                  </div>
+                  <div class="energy-card" role="listitem">
+                    <div class="energy-icon" style="color:#00C896" aria-hidden="true">🌱</div>
+                    <div class="energy-val" id="tb-ecard-shading-val" style="color:#00C896">—</div>
+                    <div class="energy-unit" id="tb-ecard-shading-unit"></div>
+                    <div class="energy-label" id="tb-ecard-shading-lbl"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ha-card>
+    `;
+    this._cacheElements();
+    this._scaffoldCreated = true;
+  }
+
+  _cacheElements() {
+    const s = this.shadowRoot;
+    if (!s) return;
+    this._els = {
+      haCard: s.querySelector('#tb-ha-card'),
+      adviceContainer: s.querySelector('#tb-advice-container'),
+      hdrTitle: s.querySelector('#tb-header-title'),
+      hdrSub: s.querySelector('#tb-header-sub'),
+      hdrBadge: s.querySelector('#tb-header-badge'),
+
+      gaugeHeatSvg: s.querySelector('#tb-gauge-heat-svg'),
+      gaugeHeatPath: s.querySelector('#tb-gauge-heat-path'),
+      gaugeHeatVal: s.querySelector('#tb-gauge-heat-val'),
+      gaugeHeatStop1: s.querySelector('#tb-grad-heat-stop1'),
+      gaugeHeatStop2: s.querySelector('#tb-grad-heat-stop2'),
+      gaugeHeatIcon: s.querySelector('#tb-gauge-heat-icon'),
+      gaugeHeatLabel: s.querySelector('#tb-gauge-heat-label-text'),
+
+      gaugeAcSvg: s.querySelector('#tb-gauge-ac-svg'),
+      gaugeAcPath: s.querySelector('#tb-gauge-ac-path'),
+      gaugeAcVal: s.querySelector('#tb-gauge-ac-val'),
+      gaugeAcStop1: s.querySelector('#tb-grad-ac-stop1'),
+      gaugeAcStop2: s.querySelector('#tb-grad-ac-stop2'),
+      gaugeAcIcon: s.querySelector('#tb-gauge-ac-icon'),
+      gaugeAcLabel: s.querySelector('#tb-gauge-ac-label-text'),
+
+      metricNetBlock: s.querySelector('#tb-metric-net-block'),
+      metricNetVal: s.querySelector('#tb-metric-net-val'),
+      metricNetLbl: s.querySelector('#tb-metric-net-lbl'),
+      metricVentBlock: s.querySelector('#tb-metric-vent-block'),
+      metricVentIcon: s.querySelector('#tb-metric-vent-icon'),
+      metricVentVal: s.querySelector('#tb-metric-vent-val'),
+      metricVentLbl: s.querySelector('#tb-metric-vent-lbl'),
+      metricTimeBlock: s.querySelector('#tb-metric-time-block'),
+      metricTimeIcon: s.querySelector('#tb-metric-time-icon'),
+      metricTimeVal: s.querySelector('#tb-metric-time-val'),
+      metricTimeLbl: s.querySelector('#tb-metric-time-lbl'),
+      metricCondBlock: s.querySelector('#tb-metric-cond-block'),
+      metricCondVal: s.querySelector('#tb-metric-cond-val'),
+      metricCondLbl: s.querySelector('#tb-metric-cond-lbl'),
+
+      secVentTitle: s.querySelector('#tb-sec-vent-title'),
+      vrowWinDot: s.querySelector('#tb-vrow-win-dot'),
+      vrowWinLbl: s.querySelector('#tb-vrow-win-lbl'),
+      vrowWinVal: s.querySelector('#tb-vrow-win-val'),
+      vrowVentDot: s.querySelector('#tb-vrow-vent-dot'),
+      vrowVentLbl: s.querySelector('#tb-vrow-vent-lbl'),
+      vrowVentVal: s.querySelector('#tb-vrow-vent-val'),
+      vrowWindRow: s.querySelector('#tb-vrow-wind-row'),
+      vrowWindLbl: s.querySelector('#tb-vrow-wind-lbl'),
+      vrowWindVal: s.querySelector('#tb-vrow-wind-val'),
+      vrowAchRow: s.querySelector('#tb-vrow-ach-row'),
+      vrowAchLbl: s.querySelector('#tb-vrow-ach-lbl'),
+      vrowAchVal: s.querySelector('#tb-vrow-ach-val'),
+      vrowCurtainsRow: s.querySelector('#tb-vrow-curtains-row'),
+      vrowCurtainsDot: s.querySelector('#tb-vrow-curtains-dot'),
+      vrowCurtainsLbl: s.querySelector('#tb-vrow-curtains-lbl'),
+      vrowCurtainsVal: s.querySelector('#tb-vrow-curtains-val'),
+      vrowCurtainsNote: s.querySelector('#tb-vrow-curtains-note'),
+      vrowSolarLbl: s.querySelector('#tb-vrow-solar-lbl'),
+      vrowSolarVal: s.querySelector('#tb-vrow-solar-val'),
+      vrowWallLbl: s.querySelector('#tb-vrow-wall-lbl'),
+      vrowWallVal: s.querySelector('#tb-vrow-wall-val'),
+      vrowKLbl: s.querySelector('#tb-vrow-k-lbl'),
+      vrowKVal: s.querySelector('#tb-vrow-k-val'),
+      vrowInsulLbl: s.querySelector('#tb-vrow-insul-lbl'),
+      vrowInsulVal: s.querySelector('#tb-vrow-insul-val'),
+      vrowWinKNote: s.querySelector('#tb-vrow-win-k-note'),
+
+      secAcIcon: s.querySelector('#tb-sec-ac-icon'),
+      secAcTitle: s.querySelector('#tb-sec-ac-title'),
+      secAcGrid: s.querySelector('#tb-sec-ac-grid'),
+
+      trendTitle: s.querySelector('#tb-trend-title'),
+      trendHeatLbl: s.querySelector('#tb-trend-heat-lbl'),
+      trendHvacDot: s.querySelector('#tb-trend-hvac-dot'),
+      trendHvacLbl: s.querySelector('#tb-trend-hvac-lbl'),
+
+      secEnergyTitle: s.querySelector('#tb-sec-energy-title'),
+      ecardDailyIcon: s.querySelector('#tb-ecard-daily-icon'),
+      ecardDailyVal: s.querySelector('#tb-ecard-daily-val'),
+      ecardDailyLbl: s.querySelector('#tb-ecard-daily-lbl'),
+      ecardTotalVal: s.querySelector('#tb-ecard-total-val'),
+      ecardTotalLbl: s.querySelector('#tb-ecard-total-lbl'),
+      ecardHeatVal: s.querySelector('#tb-ecard-heat-val'),
+      ecardHeatLbl: s.querySelector('#tb-ecard-heat-lbl'),
+      ecardAcIcon: s.querySelector('#tb-ecard-ac-icon'),
+      ecardAcVal: s.querySelector('#tb-ecard-ac-val'),
+      ecardAcLbl: s.querySelector('#tb-ecard-ac-lbl'),
+      ecardCostVal: s.querySelector('#tb-ecard-cost-val'),
+      ecardCostUnit: s.querySelector('#tb-ecard-cost-unit'),
+      ecardCostLbl: s.querySelector('#tb-ecard-cost-lbl'),
+      ecardShadingVal: s.querySelector('#tb-ecard-shading-val'),
+      ecardShadingUnit: s.querySelector('#tb-ecard-shading-unit'),
+      ecardShadingLbl: s.querySelector('#tb-ecard-shading-lbl'),
+    };
+  }
+
   _render() {
     try {
       if (!this._hass || !this._hass.states) {
@@ -883,11 +1255,15 @@ class ThermalBalanceCard extends HTMLElement {
         return `${eid}=${s.state}|${JSON.stringify(s.attributes)}`;
       });
       const hash = parts.join(';;') + `;compact=${Boolean(this._config.compact || this._config.compact_view)}`;
-      if (hash === this._lastHash && this.shadowRoot && this.shadowRoot.innerHTML !== '') return;
+      if (hash === this._lastHash && this._scaffoldCreated) return;
       this._lastHash = hash;
 
+      if (!this._scaffoldCreated || !this._els || !this._els.haCard) {
+        this._createScaffold();
+      }
+
       const isCompact = Boolean(this._config.compact || this._config.compact_view);
-      const cardTitle = this._config.title || this._t('title');
+      const cardTitle = this._config.title ? escapeHtml(this._config.title) : this._t('title');
 
       // Read values
       const heatGain = this._getState('heat_gain');
@@ -934,7 +1310,7 @@ class ThermalBalanceCard extends HTMLElement {
       const dailySavings = this._getState('daily_savings');
       const recOpenWin = this._getState('rec_open_window') === 1 || this._getAttr('rec_open_window', 'state') === 'on' || Boolean(this._getAttr('heat_gain', 'recommend_open_window'));
       const recCloseCur = this._getState('rec_close_curtains') === 1 || this._getAttr('rec_close_curtains', 'state') === 'on' || Boolean(this._getAttr('heat_gain', 'recommend_close_curtains'));
-      const currencySymbol = this._getAttr('ac_cost', 'unit_of_measurement') || '₴';
+      const currencySymbol = escapeHtml(this._getAttr('ac_cost', 'unit_of_measurement') || '₴');
 
       // Curtains & Shading attributes
       const curtainsClosed = this._getAttr('heat_gain', 'curtains_closed');
@@ -953,7 +1329,7 @@ class ThermalBalanceCard extends HTMLElement {
       const dailyColor = this._balanceColor(dailyBal);
       const timeDisplay = this._fmtTime(time1c, direction);
 
-      const ventColor = windowOpen ? (pVent > 20 ? '#FF7A3C' : (pVent < -20 ? '#4DA3FF' : '#00C896')) : '#6B7280';
+      const ventColor = windowOpen ? (pVent > 20 ? '#FF7A3C' : (pVent < -20 ? '#4DA3FF' : '#00C896')) : '#9CA3AF';
       const ventValText = !windowOpen ? `${this._t('window_closed')} (0 W)` : (pVent !== null && pVent !== undefined ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) + ' W' : '—');
 
       const modeBadge = isHeating ? `🔥 ${this._t('heat_mode')}` : `❄️ ${this._t('cool_mode')}`;
@@ -985,213 +1361,195 @@ class ThermalBalanceCard extends HTMLElement {
       // Fetch history asynchronously
       this._fetchHistory();
 
-      const heatPoints = this._getTrendPoints('heat_gain', heatGain);
-      const coolPoints = this._getTrendPoints('ac_cooling', acCooling);
-      const trendSvg = this._renderTrendSvg(heatPoints, coolPoints, isHeating);
-
       const acRowsHtml = acRows.map(r => `
         <div class="ac-row">
           <span class="ac-dot" style="background:${r.color}"></span>
-          <span class="ac-label">${r.label}</span>
-          <span class="ac-val">${r.value !== null && r.value !== undefined ? this._fmt(r.value, r.dec) : '—'} <span class="ac-unit">${r.value !== null && r.value !== undefined ? r.unit : ''}</span></span>
+          <span class="ac-label">${escapeHtml(r.label)}</span>
+          <span class="ac-val">${r.value !== null && r.value !== undefined ? this._fmt(r.value, r.dec) : '—'} <span class="ac-unit">${r.value !== null && r.value !== undefined ? escapeHtml(r.unit) : ''}</span></span>
         </div>`).join('');
 
-      this.shadowRoot.innerHTML = `
-        <style>${this._css()}</style>
-        <ha-card class="${isHeating ? 'heating-theme' : 'cooling-theme'} ${isCompact ? 'compact-mode' : ''}">
-          <div class="tb-card">
+      // Targeted DOM updates (no innerHTML wipe!)
+      const els = this._els;
+      els.haCard.className = `${isHeating ? 'heating-theme' : 'cooling-theme'} ${isCompact ? 'compact-mode' : ''}`;
 
-            <!-- SMART ADVICE BANNERS -->
-            ${recOpenWin ? `
-              <div class="advice-banner advice-window">
-                <span>🍃 <b>${this._t('open_win_rec')}</b></span>
-              </div>` : ''}
-            ${recCloseCur ? `
-              <div class="advice-banner advice-curtains">
-                <span>☀️ <b>${this._t('close_cur_rec')}</b></span>
-              </div>` : ''}
+      // Banners (accessible & sanitized)
+      let adviceHtml = '';
+      if (recOpenWin) {
+        adviceHtml += `<div class="advice-banner advice-window"><span>🍃 <b>${escapeHtml(this._t('open_win_rec'))}</b></span></div>`;
+      }
+      if (recCloseCur) {
+        adviceHtml += `<div class="advice-banner advice-curtains"><span>☀️ <b>${escapeHtml(this._t('close_cur_rec'))}</b></span></div>`;
+      }
+      els.adviceContainer.innerHTML = adviceHtml;
 
-            <div class="card-layout">
+      // Header
+      els.hdrTitle.textContent = cardTitle;
+      els.hdrSub.textContent = subtitle;
+      els.hdrSub.style.display = subtitle ? 'block' : 'none';
+      els.hdrBadge.textContent = `${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} W`;
 
-              <!-- COLUMN 1: Thermal Balance, Gauges, Metrics, Ventilation & AC Performance -->
-              <div class="card-col col-left">
-                <!-- HEADER -->
-                <div class="header">
-                  <div class="header-left">
-                    <div class="header-icon">${this._icons.thermo}</div>
-                    <div class="header-text">
-                      <div class="header-title">${cardTitle}</div>
-                      ${subtitle ? `<div class="header-sub">${subtitle}</div>` : ''}
-                    </div>
-                  </div>
-                  <div class="header-badge" style="background:var(--tb-theme-badge-bg); color:var(--tb-theme-accent); border:1px solid var(--tb-theme-border);">
-                    ${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} W
-                  </div>
-                </div>
+      // Heat Gauge
+      const heatIsLoss = heatGain !== null && heatGain < 0;
+      const heatColor1 = heatIsLoss ? '#4DA3FF' : '#FF7A3C';
+      const heatColor2 = heatIsLoss ? '#93C5FD' : '#FFB199';
+      const heatLabel = heatIsLoss ? this._t('heat_loss') : this._t('heat_gain');
+      const heatIconSvg = heatIsLoss ? this._icons.snowflake : this._icons.sun;
+      const circ = 172.7876;
+      const pctHeat = Math.min(1, Math.max(0, Math.abs(heatGain || 0) / 3500));
+      const offsetHeat = circ * (1 - pctHeat);
 
-                <!-- GAUGES -->
-                <div class="gauges-row">
-                  ${heatGain !== null && heatGain < 0
-                    ? this._gauge(heatGain, 3500, '#4DA3FF', '#93C5FD', this._t('heat_loss'), this._icons.snowflake)
-                    : this._gauge(heatGain, 3500, '#FF7A3C', '#FFB199', this._t('heat_gain'), this._icons.sun)}
-                  ${this._gauge(acCooling, 3500, acGaugeColor, acGaugeSubColor, acGaugeTitle, acGaugeIcon)}
-                </div>
+      els.gaugeHeatStop1.setAttribute('stop-color', heatColor1);
+      els.gaugeHeatStop2.setAttribute('stop-color', heatColor2);
+      els.gaugeHeatPath.setAttribute('stroke-dashoffset', offsetHeat.toFixed(1));
+      els.gaugeHeatVal.textContent = heatGain !== null ? this._fmt(heatGain, 0) : '—';
+      els.gaugeHeatIcon.innerHTML = heatIconSvg;
+      els.gaugeHeatLabel.textContent = heatLabel;
+      if (els.gaugeHeatSvg) {
+        els.gaugeHeatSvg.setAttribute('aria-label', `${heatLabel}: ${heatGain !== null ? this._fmt(heatGain, 0) : '—'} W`);
+      }
 
-                <!-- METRICS BAR -->
-                <div class="metrics-bar">
-                  <div class="metric-block">
-                    <div class="metric-icon" style="color:var(--tb-theme-accent)">⚡</div>
-                    <div class="metric-val" style="color:var(--tb-theme-accent)">${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} <span class="metric-unit">W</span></div>
-                    <div class="metric-label">${this._t('net_balance')}</div>
-                  </div>
-                  <div class="metric-block">
-                    <div class="metric-icon" style="color:${ventColor}">🪟</div>
-                    <div class="metric-val" style="color:${ventColor}">${pVent !== null && pVent !== undefined && windowOpen ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) : (windowOpen ? '0' : 'Off')} <span class="metric-unit">${windowOpen ? 'W' : ''}</span></div>
-                    <div class="metric-label">${this._t('ventilation')}</div>
-                  </div>
-                  <div class="metric-block">
-                    <div class="metric-icon" style="color:#FACC15">${dirInfo.sym}</div>
-                    <div class="metric-val" style="color:#FACC15">${timeDisplay}</div>
-                    <div class="metric-label">${this._t('to_1c')}</div>
-                  </div>
-                  <div class="metric-block">
-                    <div class="metric-icon" style="color:#93C5FD">💧</div>
-                    <div class="metric-val" style="color:#93C5FD">${condensation !== null ? this._fmt(condensation, 2) : '—'} <span class="metric-unit">L/h</span></div>
-                    <div class="metric-label">${this._t('condensation')}</div>
-                  </div>
-                </div>
+      // AC Gauge
+      const pctAc = Math.min(1, Math.max(0, Math.abs(acCooling || 0) / 3500));
+      const offsetAc = circ * (1 - pctAc);
 
-                <!-- VENTILATION & THERMAL SOURCES -->
-                <div class="section">
-                  <div class="section-title">🪟 <span>${this._t('vent_heat_exchange')}</span></div>
-                  <div class="ac-grid">
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:${windowOpen ? '#FF7A3C' : '#6B7280'}"></span>
-                      <span class="ac-label">${this._t('window')}</span>
-                      <span class="ac-val" style="color:${windowOpen ? '#FF7A3C' : '#00C896'}">${windowOpen ? this._t('window_open') : this._t('window_closed')}</span>
-                    </div>
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:${ventColor}"></span>
-                      <span class="ac-label">${this._t('ventilation')}</span>
-                      <span class="ac-val" style="color:${ventColor}">${ventValText}</span>
-                    </div>
-                    ${windSpeed !== null && windSpeed !== undefined ? `
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#60A5FA"></span>
-                      <span class="ac-label">${this._t('wind')}</span>
-                      <span class="ac-val" style="color:#60A5FA">${this._fmt(windSpeed, 1)} m/s <span class="ac-unit">(${this._fmt(windDir, 0)}°)</span></span>
-                    </div>
-                    ` : ''}
-                    ${windACH !== null && windACH !== undefined && windowOpen ? `
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#34D399"></span>
-                      <span class="ac-label">${this._t('air_change')}</span>
-                      <span class="ac-val" style="color:#34D399">${this._fmt(windACH, 1)} <span class="ac-unit">/ h</span></span>
-                    </div>
-                    ` : ''}
-                    ${curtainsState !== null && curtainsState !== undefined ? `
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}"></span>
-                      <span class="ac-label">${this._t('curtains')}</span>
-                      <span class="ac-val" style="color:${curtainsClosed ? '#8B5CF6' : '#FF7A3C'}">${curtainsClosed ? `${this._t('curtains_closed')} (-${curtainReducePct}%)` : this._t('curtains_open')} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}</span>
-                    </div>
-                    ${curtainsNote ? `<div class="curtains-note">🌙 ${curtainsNote}</div>` : ''}
-                    ` : ''}
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#FACC15"></span>
-                      <span class="ac-label">${this._t('solar')}</span>
-                      <span class="ac-val">${pSolar !== null && pSolar !== undefined ? '+' + this._fmt(pSolar, 0) + ' W' : '—'}</span>
-                    </div>
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#8B5CF6"></span>
-                      <span class="ac-label">${this._t('walls')}</span>
-                      <span class="ac-val">${pWall !== null && pWall !== undefined ? (pWall > 0 ? '+' : '') + this._fmt(pWall, 0) + ' W' : '—'}</span>
-                    </div>
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#00C896"></span>
-                      <span class="ac-label">${this._t('k_factor_actual')}</span>
-                      <span class="ac-val" style="color:#00C896">${empiricalK !== null ? this._fmt(empiricalK, 1) + ' W/K' : '—'} <span class="ac-unit">${empiricalKDev !== null ? '(' + (empiricalKDev > 0 ? '+' : '') + this._fmt(empiricalKDev, 0) + '%)' : ''}</span></span>
-                    </div>
-                    <div class="ac-row">
-                      <span class="ac-dot" style="background:#3B82F6"></span>
-                      <span class="ac-label">${this._t('insulation')}</span>
-                      <span class="ac-val" style="font-size: 0.85em; color: #9CA3AF;">${empiricalKGrade || this._t('estimated')}</span>
-                    </div>
-                    ${windowOpen ? `<div class="curtains-note">🪟 ${this._t('window_open_k_note')}</div>` : ''}
-                  </div>
-                </div>
+      els.gaugeAcStop1.setAttribute('stop-color', acGaugeColor);
+      els.gaugeAcStop2.setAttribute('stop-color', acGaugeSubColor);
+      els.gaugeAcPath.setAttribute('stroke-dashoffset', offsetAc.toFixed(1));
+      els.gaugeAcVal.textContent = acCooling !== null ? this._fmt(acCooling, 0) : '—';
+      els.gaugeAcIcon.innerHTML = acGaugeIcon;
+      els.gaugeAcLabel.textContent = acGaugeTitle;
+      if (els.gaugeAcSvg) {
+        els.gaugeAcSvg.setAttribute('aria-label', `${acGaugeTitle}: ${acCooling !== null ? this._fmt(acCooling, 0) : '—'} W`);
+      }
 
-                <!-- AC PERFORMANCE -->
-                <div class="section">
-                  <div class="section-title">${acSectionIcon} <span>${acSectionTitle}</span></div>
-                  <div class="ac-grid">${acRowsHtml}</div>
-                </div>
-              </div>
+      // Metrics Bar
+      els.metricNetVal.innerHTML = `${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} <span class="metric-unit">W</span>`;
+      els.metricNetLbl.textContent = this._t('net_balance');
+      if (els.metricNetBlock) {
+        els.metricNetBlock.setAttribute('aria-label', `${this._t('net_balance')}: ${netBalance !== null ? (netBalance > 0 ? '+' : '') + this._fmt(netBalance, 0) : '—'} W`);
+      }
 
-              <!-- COLUMN 2: 24h Trend Chart & Energy Accumulators -->
-              <div class="card-col col-right">
-                <!-- 24H ECHARTS TREND -->
-                <div class="section" style="flex: 1; display: flex; flex-direction: column;">
-                  <div class="section-title">
-                    ${this._icons.trend}
-                    <span>${this._t('trend_24h')}</span>
-                    <div class="trend-legend">
-                      <span class="legend-item"><span class="legend-dot" style="background:#FF7A3C"></span>${this._t('heat')}</span>
-                      <span class="legend-item"><span class="legend-dot" style="background:${acGaugeColor}"></span>${isHeating ? this._t('heating') : this._t('cooling')}</span>
-                    </div>
-                  </div>
-                  <div id="echart-container" style="width: 100%; flex: 1; min-height: 150px; margin-top: 4px;">${trendSvg}</div>
-                </div>
+      els.metricVentVal.innerHTML = `${pVent !== null && pVent !== undefined && windowOpen ? (pVent > 0 ? '+' : '') + this._fmt(pVent, 0) : (windowOpen ? '0' : 'Off')} <span class="metric-unit">${windowOpen ? 'W' : ''}</span>`;
+      els.metricVentVal.style.color = ventColor;
+      els.metricVentLbl.textContent = this._t('ventilation');
+      if (els.metricVentBlock) {
+        els.metricVentBlock.setAttribute('aria-label', `${this._t('ventilation')}: ${windowOpen ? this._t('window_open') : this._t('window_closed')}, ${ventValText}`);
+      }
 
-                <!-- ENERGY & COSTS -->
-                <div class="section">
-                  <div class="section-title">${this._icons.bolt} <span>${this._t('energy_cost_intel')}</span></div>
-                  <div class="energy-grid">
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:${dailyColor}">📅</div>
-                      <div class="energy-val" style="color:${dailyColor}">${dailyBal !== null ? this._fmt(dailyBal, 1) : '—'}</div>
-                      <div class="energy-unit">kWh</div>
-                      <div class="energy-label">${this._t('daily_balance')}</div>
-                    </div>
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:#8B5CF6">Σ</div>
-                      <div class="energy-val" style="color:#8B5CF6">${totalBal !== null ? this._fmt(totalBal, 1) : '—'}</div>
-                      <div class="energy-unit">kWh</div>
-                      <div class="energy-label">${this._t('total_balance')}</div>
-                    </div>
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:#FF7A3C">🔥</div>
-                      <div class="energy-val" style="color:#FF7A3C">${heatAbsorbed !== null ? this._fmt(heatAbsorbed, 1) : '—'}</div>
-                      <div class="energy-unit">kWh</div>
-                      <div class="energy-label">${this._t('heat_absorbed')}</div>
-                    </div>
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:${acGaugeColor}">${isHeating ? '🔥' : '❄'}</div>
-                      <div class="energy-val" style="color:${acGaugeColor}">${acEnergy !== null ? this._fmt(acEnergy, 1) : '—'}</div>
-                      <div class="energy-unit">kWh</div>
-                      <div class="energy-label">${this._t('ac_energy')}</div>
-                    </div>
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:#FACC15">💰</div>
-                      <div class="energy-val" style="color:#FACC15">${acCost !== null ? this._fmt(acCost, 2) : '—'}</div>
-                      <div class="energy-unit">${currencySymbol}</div>
-                      <div class="energy-label">${this._t('ac_cost')}</div>
-                    </div>
-                    <div class="energy-card">
-                      <div class="energy-icon" style="color:#00C896">🌱</div>
-                      <div class="energy-val" style="color:#00C896">${dailySavings !== null ? this._fmt(dailySavings, 2) : '—'}</div>
-                      <div class="energy-unit">${currencySymbol}/day</div>
-                      <div class="energy-label">${this._t('shading_savings')}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+      els.metricTimeIcon.textContent = dirInfo.sym;
+      els.metricTimeVal.textContent = timeDisplay;
+      els.metricTimeLbl.textContent = this._t('to_1c');
+      if (els.metricTimeBlock) {
+        els.metricTimeBlock.setAttribute('aria-label', `${this._t('to_1c')}: ${timeDisplay}`);
+      }
 
-            </div>
-          </div>
-        </ha-card>`;
+      els.metricCondVal.innerHTML = `${condensation !== null ? this._fmt(condensation, 2) : '—'} <span class="metric-unit">L/h</span>`;
+      els.metricCondLbl.textContent = this._t('condensation');
+      if (els.metricCondBlock) {
+        els.metricCondBlock.setAttribute('aria-label', `${this._t('condensation')}: ${condensation !== null ? this._fmt(condensation, 2) : '—'} L/h`);
+      }
 
+      // Ventilation & Sources Section
+      els.secVentTitle.textContent = this._t('vent_heat_exchange');
+      els.vrowWinDot.style.background = windowOpen ? '#FF7A3C' : '#9CA3AF';
+      els.vrowWinLbl.textContent = this._t('window');
+      els.vrowWinVal.textContent = windowOpen ? this._t('window_open') : this._t('window_closed');
+      els.vrowWinVal.style.color = windowOpen ? '#FF7A3C' : '#00C896';
+
+      els.vrowVentDot.style.background = ventColor;
+      els.vrowVentLbl.textContent = this._t('ventilation');
+      els.vrowVentVal.textContent = ventValText;
+      els.vrowVentVal.style.color = ventColor;
+
+      if (windSpeed !== null && windSpeed !== undefined) {
+        els.vrowWindRow.style.display = 'flex';
+        els.vrowWindLbl.textContent = this._t('wind');
+        els.vrowWindVal.innerHTML = `${this._fmt(windSpeed, 1)} m/s <span class="ac-unit">(${this._fmt(windDir, 0)}°)</span>`;
+      } else {
+        els.vrowWindRow.style.display = 'none';
+      }
+
+      if (windACH !== null && windACH !== undefined && windowOpen) {
+        els.vrowAchRow.style.display = 'flex';
+        els.vrowAchLbl.textContent = this._t('air_change');
+        els.vrowAchVal.innerHTML = `${this._fmt(windACH, 1)} <span class="ac-unit">/ h</span>`;
+      } else {
+        els.vrowAchRow.style.display = 'none';
+      }
+
+      if (curtainsState !== null && curtainsState !== undefined) {
+        els.vrowCurtainsRow.style.display = 'flex';
+        els.vrowCurtainsDot.style.background = curtainsClosed ? '#8B5CF6' : '#FF7A3C';
+        els.vrowCurtainsLbl.textContent = this._t('curtains');
+        els.vrowCurtainsVal.style.color = curtainsClosed ? '#8B5CF6' : '#FF7A3C';
+        els.vrowCurtainsVal.innerHTML = `${curtainsClosed ? `${this._t('curtains_closed')} (-${curtainReducePct}%)` : this._t('curtains_open')} ${illuminanceLux !== null && illuminanceLux !== undefined ? '<span class="ac-unit">(' + Math.round(illuminanceLux) + ' lx)</span>' : ''}`;
+        if (curtainsNote) {
+          els.vrowCurtainsNote.style.display = 'block';
+          els.vrowCurtainsNote.textContent = `🌙 ${curtainsNote}`;
+        } else {
+          els.vrowCurtainsNote.style.display = 'none';
+        }
+      } else {
+        els.vrowCurtainsRow.style.display = 'none';
+        els.vrowCurtainsNote.style.display = 'none';
+      }
+
+      els.vrowSolarLbl.textContent = this._t('solar');
+      els.vrowSolarVal.textContent = pSolar !== null && pSolar !== undefined ? '+' + this._fmt(pSolar, 0) + ' W' : '—';
+
+      els.vrowWallLbl.textContent = this._t('walls');
+      els.vrowWallVal.textContent = pWall !== null && pWall !== undefined ? (pWall > 0 ? '+' : '') + this._fmt(pWall, 0) + ' W' : '—';
+
+      els.vrowKLbl.textContent = this._t('k_factor_actual');
+      els.vrowKVal.innerHTML = empiricalK !== null ? `${this._fmt(empiricalK, 1)} W/K <span class="ac-unit">${empiricalKDev !== null ? '(' + (empiricalKDev > 0 ? '+' : '') + this._fmt(empiricalKDev, 0) + '%)' : ''}</span>` : '—';
+
+      els.vrowInsulLbl.textContent = this._t('insulation');
+      els.vrowInsulVal.textContent = empiricalKGrade || this._t('estimated');
+
+      els.vrowWinKNote.style.display = windowOpen ? 'block' : 'none';
+      els.vrowWinKNote.textContent = windowOpen ? `🪟 ${this._t('window_open_k_note')}` : '';
+
+      // AC perf
+      els.secAcIcon.innerHTML = acSectionIcon;
+      els.secAcTitle.textContent = acSectionTitle;
+      els.secAcGrid.innerHTML = acRowsHtml;
+
+      // 24h Trend
+      els.trendTitle.textContent = this._t('trend_24h');
+      els.trendHeatLbl.textContent = this._t('heat');
+      els.trendHvacDot.style.background = acGaugeColor;
+      els.trendHvacLbl.textContent = isHeating ? this._t('heating') : this._t('cooling');
+
+      // Energy
+      els.secEnergyTitle.textContent = this._t('energy_cost_intel');
+      els.ecardDailyIcon.style.color = dailyColor;
+      els.ecardDailyVal.textContent = dailyBal !== null ? this._fmt(dailyBal, 1) : '—';
+      els.ecardDailyVal.style.color = dailyColor;
+      els.ecardDailyLbl.textContent = this._t('daily_balance');
+
+      els.ecardTotalVal.textContent = totalBal !== null ? this._fmt(totalBal, 1) : '—';
+      els.ecardTotalLbl.textContent = this._t('total_balance');
+
+      els.ecardHeatVal.textContent = heatAbsorbed !== null ? this._fmt(heatAbsorbed, 1) : '—';
+      els.ecardHeatLbl.textContent = this._t('heat_absorbed');
+
+      els.ecardAcIcon.textContent = isHeating ? '🔥' : '❄';
+      els.ecardAcIcon.style.color = acGaugeColor;
+      els.ecardAcVal.textContent = acEnergy !== null ? this._fmt(acEnergy, 1) : '—';
+      els.ecardAcVal.style.color = acGaugeColor;
+      els.ecardAcLbl.textContent = this._t('ac_energy');
+
+      els.ecardCostVal.textContent = acCost !== null ? this._fmt(acCost, 2) : '—';
+      els.ecardCostUnit.textContent = currencySymbol;
+      els.ecardCostLbl.textContent = this._t('ac_cost');
+
+      els.ecardShadingVal.textContent = dailySavings !== null ? this._fmt(dailySavings, 2) : '—';
+      els.ecardShadingUnit.textContent = `${currencySymbol}/day`;
+      els.ecardShadingLbl.textContent = this._t('shading_savings');
+
+      // ECharts Update without canvas destruction
       this._initEChart(isHeating);
+      this._setupResizeObserver();
     } catch (err) {
       console.error('ThermalBalanceCard render error:', err);
     }
@@ -1227,9 +1585,14 @@ class ThermalBalanceCard extends HTMLElement {
   _css() {
     return `
       :host {
-        --tb-primary: #FFFFFF;
-        --tb-secondary: #D1D5DB;
-        --tb-label: #9CA3AF;
+        --tb-card-bg: var(--ha-card-background, var(--card-background-color, #0B1220));
+        --tb-section-bg: var(--ha-card-background-subcard, var(--primary-background-color, #162032));
+        --tb-energy-bg: var(--ha-card-background, var(--card-background-color, #0B1220));
+        --tb-primary: var(--primary-text-color, #FFFFFF);
+        --tb-secondary: var(--secondary-text-color, #9CA3AF);
+        --tb-text-contrast: #D1D5DB;
+        --tb-border: var(--divider-color, #233045);
+        --tb-border-hover: rgba(255, 255, 255, 0.2);
         --tb-heat: #FF7A3C;
         --tb-cool: #4DA3FF;
         --tb-cop: #8B5CF6;
@@ -1237,15 +1600,15 @@ class ThermalBalanceCard extends HTMLElement {
         --tb-neg: #4DA3FF;
         --tb-eq: #00C896;
         --tb-warn: #FACC15;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: var(--paper-font-body1_-_font-family, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
         display: block;
         width: 100%;
         box-sizing: border-box;
       }
       ha-card {
-        background: #0B1220;
-        border-radius: 18px;
-        box-shadow: 0 10px 36px rgba(0,0,0,0.55), 0 0 25px var(--tb-theme-glow);
+        background: var(--tb-card-bg);
+        border-radius: var(--ha-card-border-radius, 18px);
+        box-shadow: var(--ha-card-box-shadow, 0 10px 36px rgba(0,0,0,0.55)), 0 0 25px var(--tb-theme-glow);
         border: 1px solid var(--tb-theme-border);
         overflow: hidden;
         color: var(--tb-primary);
@@ -1332,7 +1695,7 @@ class ThermalBalanceCard extends HTMLElement {
         font-size: 17px;
         font-weight: 800;
         letter-spacing: 0.3px;
-        color: #FFFFFF;
+        color: var(--tb-primary);
       }
       .header-sub {
         font-size: 12px;
@@ -1355,9 +1718,9 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 12px;
       }
       .gauge-card {
-        background: #162032;
+        background: var(--tb-section-bg);
         border-radius: 12px;
-        border: 1px solid #233045;
+        border: 1px solid var(--tb-border);
         padding: 10px 8px 10px;
         display: flex;
         flex-direction: column;
@@ -1365,7 +1728,7 @@ class ThermalBalanceCard extends HTMLElement {
         transition: border-color 0.3s ease;
       }
       .gauge-card:hover {
-        border-color: rgba(255,255,255,0.2);
+        border-color: var(--tb-border-hover);
       }
       .gauge-svg {
         width: 100%;
@@ -1377,7 +1740,7 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 6px;
         font-size: 13.5px;
         font-weight: 600;
-        color: var(--tb-secondary);
+        color: var(--tb-text-contrast);
         margin-top: 6px;
       }
       .gauge-icon { display: flex; align-items: center; }
@@ -1387,8 +1750,8 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 10px;
       }
       .metric-block {
-        background: #162032;
-        border: 1px solid #233045;
+        background: var(--tb-section-bg);
+        border: 1px solid var(--tb-border);
         border-radius: 10px;
         padding: 10px 6px;
         text-align: center;
@@ -1399,7 +1762,7 @@ class ThermalBalanceCard extends HTMLElement {
         transition: border-color 0.3s ease;
       }
       .metric-block:hover {
-        border-color: rgba(255,255,255,0.2);
+        border-color: var(--tb-border-hover);
       }
       .metric-icon { font-size: 15px; line-height: 1; }
       .metric-val {
@@ -1412,18 +1775,18 @@ class ThermalBalanceCard extends HTMLElement {
       .metric-label {
         font-size: 11px;
         font-weight: 500;
-        color: var(--tb-secondary);
+        color: var(--tb-text-contrast);
         letter-spacing: 0.1px;
       }
       .section {
-        background: #162032;
-        border: 1px solid #233045;
+        background: var(--tb-section-bg);
+        border: 1px solid var(--tb-border);
         border-radius: 12px;
         padding: 12px 14px;
         transition: border-color 0.3s ease;
       }
       .section:hover {
-        border-color: rgba(255,255,255,0.2);
+        border-color: var(--tb-border-hover);
       }
       .section-title {
         display: flex;
@@ -1431,7 +1794,7 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 8px;
         font-size: 13.5px;
         font-weight: 700;
-        color: #FFFFFF;
+        color: var(--tb-primary);
         margin-bottom: 10px;
         letter-spacing: 0.2px;
       }
@@ -1452,7 +1815,7 @@ class ThermalBalanceCard extends HTMLElement {
         justify-content: space-between;
         gap: 8px;
         padding: 7px 6px;
-        border-bottom: 1px solid #233045;
+        border-bottom: 1px solid var(--tb-border);
         font-size: 12.5px;
         min-width: 0;
       }
@@ -1466,7 +1829,7 @@ class ThermalBalanceCard extends HTMLElement {
         flex-shrink: 0;
       }
       .ac-label {
-        color: var(--tb-secondary);
+        color: var(--tb-text-contrast);
         font-weight: 500;
         flex: 1;
         min-width: 0;
@@ -1476,7 +1839,7 @@ class ThermalBalanceCard extends HTMLElement {
       }
       .ac-val {
         font-weight: 700;
-        color: #FFFFFF;
+        color: var(--tb-primary);
         white-space: nowrap;
         flex-shrink: 0;
         text-align: right;
@@ -1484,12 +1847,12 @@ class ThermalBalanceCard extends HTMLElement {
       .ac-unit {
         font-weight: 400;
         font-size: 10.5px;
-        opacity: 0.75;
+        opacity: 0.85;
       }
       .curtains-note {
         grid-column: 1 / -1;
         font-size: 12.5px;
-        color: var(--tb-secondary);
+        color: var(--tb-text-contrast);
         padding: 3px 6px 6px 20px;
         line-height: 1.4;
         text-align: left;
@@ -1500,8 +1863,8 @@ class ThermalBalanceCard extends HTMLElement {
         gap: 8px;
       }
       .energy-card {
-        background: #0B1220;
-        border: 1px solid #233045;
+        background: var(--tb-energy-bg);
+        border: 1px solid var(--tb-border);
         border-radius: 10px;
         padding: 10px 10px;
         text-align: center;
@@ -1512,7 +1875,7 @@ class ThermalBalanceCard extends HTMLElement {
         transition: border-color 0.3s ease;
       }
       .energy-card:hover {
-        border-color: rgba(255,255,255,0.2);
+        border-color: var(--tb-border-hover);
       }
       .energy-icon { font-size: 18px; margin-bottom: 2px; }
       .energy-val {
@@ -1562,7 +1925,57 @@ class ThermalBalanceCard extends HTMLElement {
         overflow: visible;
       }
 
-      /* ─── Compact Mode ─── */
+      /* ─── Container Queries: Automatic Responsive Compact Layout (<= 480px) ─── */
+      @container tb-card (max-width: 480px) {
+        .tb-card {
+          padding: 12px;
+        }
+        .card-layout {
+          grid-template-columns: 1fr !important;
+          gap: 10px;
+        }
+        .gauges-row {
+          gap: 8px;
+        }
+        .gauge-card {
+          padding: 6px 4px 6px;
+        }
+        .gauge-svg {
+          max-width: 130px;
+        }
+        .gauge-label {
+          font-size: 12px;
+          margin-top: 2px;
+        }
+        .metrics-bar {
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 6px;
+        }
+        .metric-block {
+          padding: 6px 4px;
+        }
+        .energy-grid {
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 6px;
+        }
+        .energy-card {
+          padding: 6px 4px;
+        }
+        .energy-val {
+          font-size: 15px;
+        }
+        #echart-container {
+          min-height: 120px !important;
+        }
+      }
+
+      @container tb-card (max-width: 330px) {
+        .energy-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+        }
+      }
+
+      /* ─── Compact Mode (Config Override) ─── */
       ha-card.compact-mode .tb-card {
         padding: 12px;
       }
@@ -1584,14 +1997,14 @@ class ThermalBalanceCard extends HTMLElement {
         margin-top: 2px;
       }
       ha-card.compact-mode .metrics-bar {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 6px;
       }
       ha-card.compact-mode .metric-block {
         padding: 6px 4px;
       }
       ha-card.compact-mode .energy-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, 1fr) !important;
         gap: 6px;
       }
       ha-card.compact-mode .energy-card {

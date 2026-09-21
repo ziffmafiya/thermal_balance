@@ -18,6 +18,7 @@ from homeassistant.core import (
 )
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.exceptions import ServiceValidationError
 
 from .const import (
     DOMAIN,
@@ -67,6 +68,20 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             if hasattr(entry, "runtime_data") and isinstance(entry.runtime_data, ThermalBalanceCoordinator):
                 if not entry_id or entry.entry_id == entry_id:
                     coordinators.append(entry.runtime_data)
+
+        if not coordinators:
+            if entry_id:
+                raise ServiceValidationError(
+                    f"Thermal Balance config entry '{entry_id}' was not found.",
+                    translation_domain=DOMAIN,
+                    translation_key="entry_not_found",
+                    translation_placeholders={"entry_id": entry_id},
+                )
+            raise ServiceValidationError(
+                "No active Thermal Balance integration instances found.",
+                translation_domain=DOMAIN,
+                translation_key="no_instances",
+            )
         return coordinators
 
     async def handle_reset_accumulators(call: ServiceCall) -> None:
@@ -81,7 +96,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
     async def handle_calculate_cooling_needs(call: ServiceCall) -> ServiceResponse:
         coordinators = _get_coordinators(call)
-        coord = coordinators[0] if coordinators else None
+        coord = coordinators[0]
 
         t_target = float(call.data.get("target_temperature", 23.0))
         t_out = float(call.data["outdoor_temperature"]) if "outdoor_temperature" in call.data else (coord.t_out_val if coord else 30.0)

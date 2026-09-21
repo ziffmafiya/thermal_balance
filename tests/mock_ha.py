@@ -46,9 +46,15 @@ except ImportError:
 class MockState:
     """Mock Home Assistant State object."""
 
-    def __init__(self, state: str, attributes: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self,
+        state: str,
+        attributes: dict[str, Any] | None = None,
+        last_updated: Any = None,
+    ) -> None:
         self.state = state
         self.attributes = attributes or {}
+        self.last_updated = last_updated or datetime.now(timezone.utc)
 
 
 class MockStateMachine:
@@ -71,13 +77,62 @@ class MockConfig:
         self.currency = currency
 
 
+class MockServiceRegistry:
+    """Mock service registry to register and invoke services in tests."""
+
+    def __init__(self) -> None:
+        self.services: dict[str, dict[str, Callable]] = {}
+
+    def async_register(
+        self,
+        domain: str,
+        service: str,
+        service_func: Callable,
+        schema: Any = None,
+        supports_response: Any = None,
+    ) -> None:
+        self.services.setdefault(domain, {})[service] = service_func
+
+    async def async_call(
+        self,
+        domain: str,
+        service: str,
+        service_data: dict[str, Any] | None = None,
+    ) -> Any:
+        import inspect
+        func = self.services.get(domain, {}).get(service)
+        if func:
+            call = MagicMock()
+            call.data = service_data or {}
+            if inspect.iscoroutinefunction(func):
+                return await func(call)
+            return func(call)
+        return None
+
+
+class MockConfigEntries:
+    """Mock config entries container on HomeAssistant."""
+
+    def __init__(self) -> None:
+        self._entries: list[Any] = []
+
+    def async_entries(self, domain: str | None = None) -> list[Any]:
+        if domain:
+            return [e for e in self._entries if getattr(e, "domain", "thermal_balance") == domain]
+        return list(self._entries)
+
+    def add(self, entry: Any) -> None:
+        self._entries.append(entry)
+
+
 class MockHomeAssistant:
     """Mock Home Assistant instance."""
 
     def __init__(self) -> None:
         self.states = MockStateMachine()
         self.config = MockConfig()
-        self.services = MagicMock()
+        self.services = MockServiceRegistry()
+        self.config_entries = MockConfigEntries()
         self.http = MagicMock()
 
 
@@ -122,6 +177,27 @@ def setup_mock_homeassistant() -> None:
     ha_const.SUN_EVENT_SUNRISE = "sunrise"
     ha_const.SUN_EVENT_SUNSET = "sunset"
 
+    class MockUnitOfEnergy(StrEnum):
+        KILO_WATT_HOUR = "kWh"
+        WATT_HOUR = "Wh"
+
+    class MockUnitOfPower(StrEnum):
+        WATT = "W"
+        KILO_WATT = "kW"
+
+    class MockUnitOfTemperature(StrEnum):
+        CELSIUS = "°C"
+
+    class MockUnitOfTime(StrEnum):
+        MINUTES = "min"
+        HOURS = "h"
+        SECONDS = "s"
+
+    ha_const.UnitOfEnergy = MockUnitOfEnergy
+    ha_const.UnitOfPower = MockUnitOfPower
+    ha_const.UnitOfTemperature = MockUnitOfTemperature
+    ha_const.UnitOfTime = MockUnitOfTime
+
     ha_core = ModuleType("homeassistant.core")
     ha_core.__path__ = []
 
@@ -147,9 +223,35 @@ def setup_mock_homeassistant() -> None:
     ha_helpers_event = ModuleType("homeassistant.helpers.event")
     ha_helpers_selector = ModuleType("homeassistant.helpers.selector")
     ha_helpers_entity = ModuleType("homeassistant.helpers.entity")
+    ha_helpers_entity_platform = ModuleType("homeassistant.helpers.entity_platform")
+    ha_helpers_entity_platform.AddEntitiesCallback = Callable
     ha_helpers_restore_state = ModuleType("homeassistant.helpers.restore_state")
-
     ha_helpers_update_coordinator = ModuleType("homeassistant.helpers.update_coordinator")
+
+    class MockDeviceInfo:
+        def __init__(self, **kwargs: Any) -> None:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    ha_helpers_entity.DeviceInfo = MockDeviceInfo
+
+    class MockRestoreEntity:
+        async def async_get_last_state(self) -> Any:
+            return getattr(self, "_mock_last_state", None)
+
+    ha_helpers_restore_state.RestoreEntity = MockRestoreEntity
+
+    class MockCoordinatorEntity:
+        def __init__(self, coordinator: Any = None) -> None:
+            self.coordinator = coordinator
+
+        def __class_getitem__(cls, item: Any) -> Any:
+            return cls
+
+        async def async_added_to_hass(self) -> None:
+            pass
+
+    ha_helpers_update_coordinator.CoordinatorEntity = MockCoordinatorEntity
 
     class MockDataUpdateCoordinator:
         def __init__(
@@ -188,6 +290,43 @@ def setup_mock_homeassistant() -> None:
 
     ha_components_diagnostics = ModuleType("homeassistant.components.diagnostics")
     ha_components_sensor = ModuleType("homeassistant.components.sensor")
+
+    class MockSensorDeviceClass(StrEnum):
+        POWER = "power"
+        ENERGY = "energy"
+        TEMPERATURE = "temperature"
+        DURATION = "duration"
+        MONETARY = "monetary"
+
+    class MockSensorStateClass(StrEnum):
+        MEASUREMENT = "measurement"
+        TOTAL = "total"
+        TOTAL_INCREASING = "total_increasing"
+
+    from dataclasses import dataclass
+
+    @dataclass(frozen=True, kw_only=True)
+    class MockSensorEntityDescription:
+        key: str = ""
+        name: str | None = None
+        native_unit_of_measurement: str | None = None
+        device_class: Any = None
+        state_class: Any = None
+        suggested_display_precision: int | None = None
+        icon: str | None = None
+        entity_category: Any = None
+        translation_key: str | None = None
+
+    class MockSensorEntity:
+        @property
+        def icon(self) -> str | None:
+            return getattr(self, "_attr_icon", None)
+
+    ha_components_sensor.SensorDeviceClass = MockSensorDeviceClass
+    ha_components_sensor.SensorStateClass = MockSensorStateClass
+    ha_components_sensor.SensorEntityDescription = MockSensorEntityDescription
+    ha_components_sensor.SensorEntity = MockSensorEntity
+
     ha_components_binary_sensor = ModuleType("homeassistant.components.binary_sensor")
     ha_components_button = ModuleType("homeassistant.components.button")
     ha_components_number = ModuleType("homeassistant.components.number")
@@ -288,6 +427,7 @@ def setup_mock_homeassistant() -> None:
     # util.dt
     ha_util_dt.now = lambda: datetime.now(timezone.utc)
     ha_util_dt.utcnow = lambda: datetime.now(timezone.utc)
+    ha_util_dt.DEFAULT_TIME_ZONE = timezone.utc
 
     # components.diagnostics
     def async_redact_data(data: dict[str, Any], to_redact: list[str]) -> dict[str, Any]:
@@ -295,8 +435,34 @@ def setup_mock_homeassistant() -> None:
 
     ha_components_diagnostics.async_redact_data = async_redact_data
 
+    # exceptions
+    ha_exceptions = ModuleType("homeassistant.exceptions")
+
+    class HomeAssistantError(Exception):
+        """General Home Assistant exception."""
+
+    class ServiceValidationError(HomeAssistantError):
+        """Action/service validation exception with translation support."""
+
+        def __init__(
+            self,
+            message: str,
+            *,
+            translation_domain: str | None = None,
+            translation_key: str | None = None,
+            translation_placeholders: dict[str, str] | None = None,
+        ) -> None:
+            super().__init__(message)
+            self.translation_domain = translation_domain
+            self.translation_key = translation_key
+            self.translation_placeholders = translation_placeholders
+
+    ha_exceptions.HomeAssistantError = HomeAssistantError
+    ha_exceptions.ServiceValidationError = ServiceValidationError
+
     # Register in sys.modules
     sys.modules["homeassistant"] = ha
+    sys.modules["homeassistant.exceptions"] = ha_exceptions
     sys.modules["homeassistant.const"] = ha_const
     sys.modules["homeassistant.core"] = ha_core
     sys.modules["homeassistant.config_entries"] = ha_config_entries
@@ -306,6 +472,7 @@ def setup_mock_homeassistant() -> None:
     sys.modules["homeassistant.helpers.selector"] = ha_helpers_selector
     sys.modules["homeassistant.helpers.event"] = ha_helpers_event
     sys.modules["homeassistant.helpers.entity"] = ha_helpers_entity
+    sys.modules["homeassistant.helpers.entity_platform"] = ha_helpers_entity_platform
     sys.modules["homeassistant.helpers.restore_state"] = ha_helpers_restore_state
     sys.modules["homeassistant.helpers.update_coordinator"] = ha_helpers_update_coordinator
     sys.modules["homeassistant.components"] = ha_components

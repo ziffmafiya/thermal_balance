@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
-from mock_ha import MockConfigEntry, MockHomeAssistant, setup_mock_homeassistant
+from mock_ha import MockConfigEntry, MockHomeAssistant, MockState, setup_mock_homeassistant
 
 setup_mock_homeassistant()
 
@@ -30,9 +30,11 @@ from custom_components.thermal_balance.const import (
     HVAC_MODE_COOLING,
     HVAC_MODE_HEATING,
     SENSOR_DAILY_THERMAL_BALANCE,
+    SENSOR_EMPIRICAL_K_FACTOR,
     SENSOR_EQUILIBRIUM_TEMPERATURE,
     SENSOR_INSTANT_HEAT_GAIN,
     SENSOR_REQUIRED_AC_POWER,
+    SENSOR_TOTAL_HEAT_ABSORBED,
 )
 
 
@@ -152,6 +154,114 @@ class TestThermalBalanceCoordinator(unittest.TestCase):
         slope = self.coordinator._calculate_t_in_derivative(now)
 
         self.assertLess(slope, 0.0)  # Cooling down
+
+    def test_monotonic_heat_accumulation_when_cooler_outside(self) -> None:
+        """Test that heat accumulator does not decrease when outdoor is colder than indoor."""
+        now = datetime.now(timezone.utc)
+        self.coordinator.total_heat_absorbed = 10.0
+        self.coordinator.daily_heat_absorbed = 5.0
+        self.coordinator.last_update_time = now - timedelta(seconds=30)
+
+        # Outdoor is cooler than indoor, solar is 0 -> p_env is negative (heat loss)
+        self.coordinator.t_in_val = 24.0
+        self.coordinator.t_out_val = 15.0
+        self.coordinator.solar_val = 0.0
+        self.coordinator.ac_power_val = 0.0
+
+        self.coordinator.recalculate()
+
+        # Net environmental flux should be negative
+        self.assertLess(self.coordinator.data[SENSOR_INSTANT_HEAT_GAIN], 0.0)
+        # But accumulated heat absorbed must NOT decrease!
+        self.assertGreaterEqual(self.coordinator.total_heat_absorbed, 10.0)
+        self.assertGreaterEqual(self.coordinator.daily_heat_absorbed, 5.0)
+
+    def test_k_factor_ema_sampling_invariance(self) -> None:
+        """Test that rapid sensor update bursts do not cause runaway K-factor smoothing."""
+        self.coordinator.empirical_k_val = 10.0
+        self.coordinator._k_samples_count = 0
+        self.coordinator.window_is_open = False
+        self.coordinator.ac_power_val = 500.0
+        self.coordinator.t_in_val = 24.0
+        self.coordinator.t_out_val = 32.0
+
+        # Simulate 20 rapid recalculations arriving within sub-second intervals (e.g. sensor flutter)
+        for _ in range(20):
+            self.coordinator.recalculate()
+
+        # Because minimum calibration interval is 15s, samples count must not increment 20 times!
+        self.assertLessEqual(self.coordinator._k_samples_count, 1)
+
+    def test_dt_dt_history_resilience_to_sensor_flood(self) -> None:
+        """Test that rapid non-temperature updates do not exhaust the 10-minute dT/dt regression window."""
+        now = datetime.now(timezone.utc)
+
+        # Record genuine temperature drop: 23°C at t-8m, 21°C at t-4m
+        self.coordinator.t_in_val = 23.0
+        self.coordinator._calculate_t_in_derivative(now - timedelta(minutes=8))
+        self.coordinator.t_in_val = 21.0
+        self.coordinator._calculate_t_in_derivative(now - timedelta(minutes=4))
+
+        # Now simulate 100 rapid power/lux sensor updates in 5 seconds where indoor temp is unchanged (20°C)
+        self.coordinator.t_in_val = 20.0
+        for i in range(100):
+            t_instant = now + timedelta(milliseconds=i * 50)
+            self.coordinator._calculate_t_in_derivative(t_instant)
+
+        # Buffer must NOT be cleared of historical points from 8 and 4 minutes ago
+        self.assertGreaterEqual(len(self.coordinator._t_in_history), 3)
+        t_span = (self.coordinator._t_in_history[-1][0] - self.coordinator._t_in_history[0][0]).total_seconds()
+        self.assertGreater(t_span, 200.0)
+
+        # Slope must still accurately reflect the cooling trend (< 0)
+        slope = self.coordinator._calculate_t_in_derivative(now + timedelta(seconds=6))
+        self.assertLess(slope, 0.0)
+
+    def test_restore_state_same_day_vs_previous_day(self) -> None:
+        """Test that state restoration preserves all-time accumulators and only restores daily on same day."""
+        import asyncio
+        from custom_components.thermal_balance.sensor import ThermalBalanceSensor, SENSOR_TYPES
+
+        now = datetime.now(timezone.utc)
+        yesterday = now - timedelta(days=1)
+
+        total_desc = next(d for d in SENSOR_TYPES if d.key == SENSOR_TOTAL_HEAT_ABSORBED)
+        daily_desc = next(d for d in SENSOR_TYPES if d.key == SENSOR_DAILY_THERMAL_BALANCE)
+
+        # --- Test 1: Restore from same day ---
+        sensor_daily = ThermalBalanceSensor(self.coordinator, self.entry, daily_desc)
+        sensor_daily._mock_last_state = MockState(
+            state="2.5",
+            attributes={"daily_heat_absorbed": 3.0, "daily_ac_thermal_energy": 0.5},
+            last_updated=now,
+        )
+        asyncio.run(sensor_daily.async_added_to_hass())
+
+        self.assertEqual(self.coordinator.daily_heat_absorbed, 3.0)
+        self.assertEqual(self.coordinator.daily_ac_thermal_energy, 0.5)
+
+        # --- Test 2: Restore from previous day ---
+        self.coordinator.daily_heat_absorbed = 0.0
+        self.coordinator.daily_ac_thermal_energy = 0.0
+
+        sensor_daily_old = ThermalBalanceSensor(self.coordinator, self.entry, daily_desc)
+        sensor_daily_old._mock_last_state = MockState(
+            state="2.5",
+            attributes={"daily_heat_absorbed": 9.0, "daily_ac_thermal_energy": 7.0},
+            last_updated=yesterday,
+        )
+        asyncio.run(sensor_daily_old.async_added_to_hass())
+
+        # Stale daily accumulators from yesterday must NOT be restored!
+        self.assertEqual(self.coordinator.daily_heat_absorbed, 0.0)
+        self.assertEqual(self.coordinator.daily_ac_thermal_energy, 0.0)
+
+        # But total heat absorbed must be restored regardless of day
+        sensor_total = ThermalBalanceSensor(self.coordinator, self.entry, total_desc)
+        sensor_total._mock_last_state = MockState(state="125.4", last_updated=yesterday)
+        asyncio.run(sensor_total.async_added_to_hass())
+        self.assertEqual(self.coordinator.total_heat_absorbed, 125.4)
+        self.assertEqual(self.coordinator.data[SENSOR_TOTAL_HEAT_ABSORBED], 125.4)
 
 
 if __name__ == "__main__":

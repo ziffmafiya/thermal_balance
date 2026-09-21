@@ -171,6 +171,7 @@ class ThermalCalculationResult:
     t_equilibrium: float = 20.0
     p_required_hvac: float = 0.0
     is_capacity_insufficient: bool = False
+    p_loss: float = 0.0
 
 
 def calculate_ac_performance(
@@ -550,6 +551,7 @@ def calculate_thermal_balance(
     p_trans = p_wall + p_vent
     p_env = p_trans + p_solar
     p_gain = p_env
+    p_loss = max(0.0, -p_env)
 
     # 4. AC Cooling/Heating calculations
     ac_perf = calculate_ac_performance(inputs, ac_max_cooling, ac_airflow_m3h)
@@ -631,4 +633,5 @@ def calculate_thermal_balance(
         t_equilibrium=t_equilibrium,
         p_required_hvac=p_required_hvac,
         is_capacity_insufficient=is_capacity_insufficient,
+        p_loss=p_loss,
     )

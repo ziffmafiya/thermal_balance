@@ -1,7 +1,7 @@
 # 🌡️ Thermal Balance — Home Assistant Custom Component & Premium Card
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/default)
-[![version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
+[![version](https://img.shields.io/badge/version-v2.1.0-blue.svg)](https://github.com/ziffmafiya/thermal_balance/releases/latest)
 [![Tests](https://github.com/ziffmafiya/thermal_balance/actions/workflows/test.yml/badge.svg)](https://github.com/ziffmafiya/thermal_balance/actions)
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository=https%3A%2F%2Fgithub.com%2Fziffmafiya%2Fthermal_balance&category=Integration)
 
@@ -59,7 +59,8 @@ custom_components/thermal_balance/
 ├── __init__.py                # Integration setup, services & Lovelace resource registration
 ├── config_flow.py             # 3-step Wizard Config, Options & Reconfigure Flow
 ├── const.py                   # Constants, default coefficients & entity IDs
-├── coordinator.py             # Thermodynamic coordinator & event listener
+├── coordinator.py             # Thin Home Assistant event glue coordinator
+├── engine.py                  # Pure domain calculations, calibrator & advisors
 ├── model.py                   # Pure thermodynamic & solar physics engine
 ├── sensor.py                  # Analytical sensors & accumulators
 ├── binary_sensor.py           # Smart recommendation & capacity binary sensors
@@ -67,6 +68,7 @@ custom_components/thermal_balance/
 ├── number.py                  # Dynamic electricity tariff entity
 ├── select.py                  # HVAC mode & curtain type select entities
 ├── diagnostics.py             # Home Assistant Diagnostics dump support
+├── quality_scale.yaml         # Home Assistant Quality Scale compliance rules
 ├── services.yaml              # Official Home Assistant action descriptions
 ├── icons.json                 # Quality scale MDI icon localization
 ├── thermal-balance-card.js    # Premium Lovelace card (i18n, compact view, themes)
@@ -82,9 +84,11 @@ custom_components/thermal_balance/
 tests/
 ├── mock_ha.py                 # Standalone Home Assistant test harness
 ├── test_model.py              # Physics & clear-sky thermodynamic unit tests
+├── test_engine.py             # Pure domain engine, tracker, calibrator tests
 ├── test_coordinator.py        # Coordinator, sunrise/sunset & action tests
 ├── test_config_flow.py        # 3-step Config/Options/Reconfigure flow tests
-└── test_diagnostics.py        # Diagnostic dump tests
+├── test_diagnostics.py        # Diagnostic dump tests
+└── test_services.py           # Services & ServiceValidationError tests
 ```
 
 ---
