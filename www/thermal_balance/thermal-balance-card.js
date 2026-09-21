@@ -421,6 +421,7 @@ class ThermalBalanceCard extends HTMLElement {
     if (!config) throw new Error('Invalid configuration');
     this._config = { ...config };
     this._lastHash = '';
+    this._lastHistoryFetch = 0;
     this._render();
   }
 
@@ -438,6 +439,7 @@ class ThermalBalanceCard extends HTMLElement {
       };
       window.addEventListener('resize', this._onWindowResize);
     }
+    this._lastHash = '';
     this._render();
   }
 
@@ -456,6 +458,9 @@ class ThermalBalanceCard extends HTMLElement {
       } catch (e) {}
       this._chart = null;
     }
+    this._scaffoldCreated = false;
+    this._els = null;
+    this._lastHash = '';
   }
 
   _setupResizeObserver() {
@@ -625,28 +630,27 @@ class ThermalBalanceCard extends HTMLElement {
     }).then(res => {
       this._fetchingHistory = false;
       this._historyData = res || {};
-      this._render();
-    }).catch(() => {
+      this._historyVersion = (this._historyVersion || 0) + 1;
+      this._lastHash = '';
+      const isHeating = Boolean(this._getAttr('ac_cooling', 'is_heating') || this._getAttr('net_balance', 'is_heating'));
+      this._initEChart(isHeating);
+    }).catch(err => {
       this._fetchingHistory = false;
+      console.warn('ThermalBalanceCard: failed to fetch history', err);
     });
   }
 
   _sampleHistory(key, liveVal, numPoints = 288) {
     const eid = this._resolveEntity(key);
-    const result = new Array(numPoints).fill(0);
+    const validLive = (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) ? parseFloat(liveVal) : 0;
+    const result = new Array(numPoints).fill(validLive);
 
     if (!eid || !this._historyData || !this._historyData[eid]) {
-      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = liveVal;
-      }
       return result;
     }
 
     const items = this._historyData[eid];
     if (!Array.isArray(items) || items.length === 0) {
-      if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-        result[numPoints - 1] = liveVal;
-      }
       return result;
     }
 
@@ -654,8 +658,9 @@ class ThermalBalanceCard extends HTMLElement {
     const start = now - 86400;
     const interval = 86400 / (numPoints - 1);
 
-    let currentVal = parseFloat(items[0].s);
-    if (isNaN(currentVal)) currentVal = 0;
+    const firstRaw = items[0].s !== undefined ? items[0].s : items[0].state;
+    let firstVal = parseFloat(firstRaw);
+    let currentVal = !isNaN(firstVal) ? firstVal : validLive;
     let itemIdx = 0;
 
     for (let i = 0; i < numPoints; i++) {
@@ -663,9 +668,15 @@ class ThermalBalanceCard extends HTMLElement {
 
       while (itemIdx < items.length) {
         const item = items[itemIdx];
-        const itemTime = item.lu > 1e11 ? item.lu / 1000 : item.lu;
+        const rawTime = item.lu !== undefined ? item.lu : (item.lc !== undefined ? item.lc : (item.last_updated ? new Date(item.last_updated).getTime() / 1000 : (item.last_changed ? new Date(item.last_changed).getTime() / 1000 : null)));
+        if (rawTime === null || rawTime === undefined || isNaN(rawTime)) {
+          itemIdx++;
+          continue;
+        }
+        const itemTime = rawTime > 1e11 ? rawTime / 1000 : rawTime;
         if (itemTime <= targetTime) {
-          const parsed = parseFloat(item.s);
+          const rawVal = item.s !== undefined ? item.s : item.state;
+          const parsed = parseFloat(rawVal);
           if (!isNaN(parsed)) currentVal = parsed;
           itemIdx++;
         } else {
@@ -676,7 +687,7 @@ class ThermalBalanceCard extends HTMLElement {
     }
 
     if (liveVal !== null && liveVal !== undefined && !isNaN(liveVal)) {
-      result[numPoints - 1] = liveVal;
+      result[numPoints - 1] = parseFloat(liveVal);
     }
 
     return result;
@@ -811,10 +822,11 @@ class ThermalBalanceCard extends HTMLElement {
         legend: {
           show: true,
           top: 0,
-          right: 10,
-          textStyle: { color: '#D1D5DB', fontSize: 10 },
-          itemWidth: 10,
-          itemHeight: 6,
+          right: 8,
+          textStyle: { color: '#9CA3AF', fontSize: 11, fontWeight: 500 },
+          icon: 'roundRect',
+          itemWidth: 12,
+          itemHeight: 4,
           data: [this._t('heat'), hvacSeriesName, this._t('net')]
         },
         tooltip: {
@@ -837,10 +849,10 @@ class ThermalBalanceCard extends HTMLElement {
           }
         },
         grid: {
-          top: 25,
-          right: 10,
+          top: 26,
+          right: 12,
           bottom: 22,
-          left: 45,
+          left: 48,
         },
         xAxis: {
           type: 'category',
@@ -908,7 +920,7 @@ class ThermalBalanceCard extends HTMLElement {
             lineStyle: { width: 2.2, color: '#00C896', type: 'dashed' },
             areaStyle: {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: 'rgba(0, 200, 150, 0.15)' },
+                { offset: 0, color: 'rgba(0, 200, 150, 0.12)' },
                 { offset: 1, color: 'rgba(0, 200, 150, 0.0)' }
               ])
             },
@@ -917,7 +929,7 @@ class ThermalBalanceCard extends HTMLElement {
         ]
       };
 
-      this._chart.setOption(option);
+      this._chart.setOption(option, true);
       setTimeout(() => this._chart && this._chart.resize(), 50);
     }).catch(() => {});
   }
@@ -1080,10 +1092,6 @@ class ThermalBalanceCard extends HTMLElement {
                 <div class="section-title">
                   ${this._icons.trend}
                   <span id="tb-trend-title"></span>
-                  <div class="trend-legend">
-                    <span class="legend-item"><span class="legend-dot" style="background:#FF7A3C"></span><span id="tb-trend-heat-lbl"></span></span>
-                    <span class="legend-item"><span class="legend-dot" id="tb-trend-hvac-dot" style="background:#4DA3FF"></span><span id="tb-trend-hvac-lbl"></span></span>
-                  </div>
                 </div>
                 <div id="echart-container" style="width: 100%; flex: 1; min-height: 150px; margin-top: 4px;"></div>
               </div>
@@ -1254,7 +1262,7 @@ class ThermalBalanceCard extends HTMLElement {
         if (!s) return '';
         return `${eid}=${s.state}|${JSON.stringify(s.attributes)}`;
       });
-      const hash = parts.join(';;') + `;compact=${Boolean(this._config.compact || this._config.compact_view)}`;
+      const hash = parts.join(';;') + `;compact=${Boolean(this._config.compact || this._config.compact_view)};hver=${this._historyVersion || 0}`;
       if (hash === this._lastHash && this._scaffoldCreated) return;
       this._lastHash = hash;
 
@@ -1515,10 +1523,10 @@ class ThermalBalanceCard extends HTMLElement {
       els.secAcGrid.innerHTML = acRowsHtml;
 
       // 24h Trend
-      els.trendTitle.textContent = this._t('trend_24h');
-      els.trendHeatLbl.textContent = this._t('heat');
-      els.trendHvacDot.style.background = acGaugeColor;
-      els.trendHvacLbl.textContent = isHeating ? this._t('heating') : this._t('cooling');
+      if (els.trendTitle) els.trendTitle.textContent = this._t('trend_24h');
+      if (els.trendHeatLbl) els.trendHeatLbl.textContent = this._t('heat');
+      if (els.trendHvacDot) els.trendHvacDot.style.background = acGaugeColor;
+      if (els.trendHvacLbl) els.trendHvacLbl.textContent = isHeating ? this._t('heating') : this._t('cooling');
 
       // Energy
       els.secEnergyTitle.textContent = this._t('energy_cost_intel');
