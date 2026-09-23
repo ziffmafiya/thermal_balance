@@ -323,7 +323,7 @@
   },
   "exceptions": {
     "entry_not_found": {
-      "message": "Конфигурационная запись Thermal Balance '{entry_id}' не найдена."
+      "message": "Конфигурационная запись Thermal Balance {entry_id} не найдена."
     },
     "no_instances": {
       "message": "Активные экземпляры интеграции Thermal Balance не найдены."

@@ -323,7 +323,7 @@
   },
   "exceptions": {
     "entry_not_found": {
-      "message": "Thermal Balance config entry '{entry_id}' was not found."
+      "message": "Thermal Balance config entry {entry_id} was not found."
     },
     "no_instances": {
       "message": "No active Thermal Balance integration instances found."

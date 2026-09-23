@@ -72,7 +72,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if not coordinators:
             if entry_id:
                 raise ServiceValidationError(
-                    f"Thermal Balance config entry '{entry_id}' was not found.",
+                    f"Thermal Balance config entry {entry_id} was not found.",
                     translation_domain=DOMAIN,
                     translation_key="entry_not_found",
                     translation_placeholders={"entry_id": entry_id},
